@@ -1,0 +1,10 @@
+<?php
+
+/*
+** Plugin will try to guess when a custom e-mail address should be used when
+** composing an e-mail if this option is set to "true". If you have too many
+** false positives or don't want to use it, set it to false.
+*/
+//$rcmail_config['custom_from_compose_auto'] = true;
+
+?>

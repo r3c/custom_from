@@ -1,0 +1,25 @@
+
+/*
+** Plugin custom_from for RoundcubeMail
+**  - Plugin CSS styles
+*/
+
+#compose-headers td a.custom_from_hide {
+	display	: none;
+}
+
+#compose-headers td a.custom_from_off {
+	position	: relative;
+	top			: 3px;
+	margin		: 0px 4px;
+}
+
+#compose-headers td a.custom_from_on {
+	position	: relative;
+	top			: 3px;
+	margin		: 0px 4px;
+}
+
+#compose-headers td input.custom_from {
+	width	: 300px;
+}
