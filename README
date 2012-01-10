@@ -2,11 +2,11 @@
 #
 # Custom From plugin for RoundCube Webmail
 #
-# Purpose:	Enable manual input of "From:" field input with a button next to
-#           identities list, and detect mails sent from a virtual address.
-# Version:	1.1
-# Author:	R�mi Caput
-# Contact:	roundcube.net [at] mirari.fr
+# Purpose: Enable manual input of "From:" field input with a button next to
+#          identities list, and detect mails sent from a virtual address.
+# Version: 1.1
+# Author:  Rémi Caput
+# Contact: roundcube.net [at] mirari.fr
 #
 ###############################################################################
 
