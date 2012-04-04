@@ -46,15 +46,23 @@ class	custom_from extends rcube_plugin
 				$identities = array ();
 				$recipients = array ();
 
-				// Decode recipients from "to" header field
-				foreach ($IMAP->decode_address_list ($headers->to) as $recipient)
+				// Decode recipients from e-mail headers
+				$targets = array_merge
+				(
+					isset ($headers->from) ? $IMAP->decode_address_list ($headers->from) : array (),
+					isset ($headers->cc) ? $IMAP->decode_address_list ($headers->cc) : array (),
+					isset ($headers->cci) ? $IMAP->decode_address_list ($headers->cci) : array (),
+					isset ($headers->to) ? $IMAP->decode_address_list ($headers->to) : array ()
+				);
+
+				foreach ($targets as $target)
 				{
-					if (isset ($recipient['mailto']))
+					if (isset ($target['mailto']))
 					{
-						$recipients[$recipient['mailto']] = array
+						$recipients[$target['mailto']] = array
 						(
-							'domain'	=> preg_replace ('/^[^@]*@(.*)$/', '$1', $recipient['mailto']),
-							'name'		=> $recipient['name']
+							'domain'	=> preg_replace ('/^[^@]*@(.*)$/', '$1', $target['mailto']),
+							'name'		=> $target['name']
 						);
 					}
 				}
@@ -65,7 +73,7 @@ class	custom_from extends rcube_plugin
 					$identities[$identity['email']] = array
 					(
 						'domain'	=> preg_replace ('/^[^@]*@(.*)$/', '$1', $identity['email']),
-						'id'		=> $identity['id']
+						'name'		=> $identity['name']
 					);
 				}
 
