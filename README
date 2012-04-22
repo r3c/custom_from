@@ -4,7 +4,7 @@
 #
 # Purpose: Enable manual input of "From:" field input with a button next to
 #          identities list, and detect mails sent from a virtual address.
-# Version: 1.1
+# Version: 1.2
 # Author:  Rémi Caput
 # Contact: roundcube.net [at] mirari.fr
 #
@@ -33,3 +33,8 @@ sender button will appear at the right of the identity selection list.
 If you want to disable the "automatic replacement on reply" feature, rename
 "config.inc.php.dist" file into "config.inc.php", uncomment the line with a
 parameter named "custom_from_compose_auto" and set this value to "false".
+
+Thanks
+------
+
+- dwurf (https://github.com/dwurf) for the globals $IMAP and $USER fix

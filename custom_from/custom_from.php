@@ -35,18 +35,15 @@ class	custom_from extends rcube_plugin
 		$rcmail = rcmail::get_instance ();
 		$this->load_config ();
 
-		// Newer versions of roundcube don't provide a global $IMAP or $USER variable
-		if (!$IMAP && $rcmail->storage) 
-		{
-			$IMAP = $rcmail->storage;
-		}
-		if (!$USER && $rcmail->user) 
-		{
-			$USER = $rcmail->user;
-		}
-
 		if ($rcmail->config->get ('custom_from_compose_auto', true) && isset ($params['param']['reply_uid']))
 		{
+			// Newer versions of roundcube don't provide a global $IMAP or $USER variable
+			if (!isset ($IMAP) && isset ($rcmail->storage))
+				$IMAP = $rcmail->storage;
+
+			if (!isset ($USER) && isset ($rcmail->user))
+				$USER = $rcmail->user;
+
 			$IMAP->get_all_headers = true;
 
 			$headers = $IMAP->get_message ($params['param']['reply_uid']);
