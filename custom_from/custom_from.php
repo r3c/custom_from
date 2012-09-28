@@ -75,8 +75,8 @@ class	custom_from extends rcube_plugin
 				$targets = array_merge
 				(
 					$mode == 1 && isset ($headers->to) ? $IMAP->decode_address_list ($headers->to) : array (),
-					$mode == 2 && isset ($headers->cc) ? $IMAP->decode_address_list ($headers->cc) : array (),
-					$mode == 2 && isset ($headers->cci) ? $IMAP->decode_address_list ($headers->cci) : array (),
+					$mode == 1 && isset ($headers->cc) ? $IMAP->decode_address_list ($headers->cc) : array (),
+					$mode == 1 && isset ($headers->cci) ? $IMAP->decode_address_list ($headers->cci) : array (),
 					$mode == 2 && isset ($headers->from) ? $IMAP->decode_address_list ($headers->from) : array ()
 				);
 
