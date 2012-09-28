@@ -35,7 +35,25 @@ class	custom_from extends rcube_plugin
 		$rcmail = rcmail::get_instance ();
 		$this->load_config ();
 
-		if ($rcmail->config->get ('custom_from_compose_auto', true) && isset ($params['param']['reply_uid']))
+		if (isset ($params['param']['reply_uid']))
+		{
+			$message = $params['param']['reply_uid'];
+			$mode = 1;
+		}
+		else if (isset ($params['param']['forward_uid']))
+		{
+			$message = $params['param']['forward_uid'];
+			$mode = 2;
+		}
+		else if (isset ($params['param']['uid']))
+		{
+			$message = $params['param']['uid'];
+			$mode = 2;
+		}
+		else
+			$mode = 0;
+
+		if ($rcmail->config->get ('custom_from_compose_auto', true) && $mode > 0)
 		{
 			// Newer versions of roundcube don't provide a global $IMAP or $USER variable
 			if (!isset ($IMAP) && isset ($rcmail->storage))
@@ -46,9 +64,9 @@ class	custom_from extends rcube_plugin
 
 			$IMAP->get_all_headers = true;
 
-			$headers = $IMAP->get_message ($params['param']['reply_uid']);
+			$headers = $IMAP->get_message ($message);
 
-			if ($headers !== null && isset ($headers->to))
+			if ($headers !== null)
 			{
 				$identities = array ();
 				$recipients = array ();
@@ -56,10 +74,10 @@ class	custom_from extends rcube_plugin
 				// Decode recipients from e-mail headers
 				$targets = array_merge
 				(
-					isset ($headers->from) ? $IMAP->decode_address_list ($headers->from) : array (),
-					isset ($headers->cc) ? $IMAP->decode_address_list ($headers->cc) : array (),
-					isset ($headers->cci) ? $IMAP->decode_address_list ($headers->cci) : array (),
-					isset ($headers->to) ? $IMAP->decode_address_list ($headers->to) : array ()
+					$mode == 1 && isset ($headers->to) ? $IMAP->decode_address_list ($headers->to) : array (),
+					$mode == 2 && isset ($headers->cc) ? $IMAP->decode_address_list ($headers->cc) : array (),
+					$mode == 2 && isset ($headers->cci) ? $IMAP->decode_address_list ($headers->cci) : array (),
+					$mode == 2 && isset ($headers->from) ? $IMAP->decode_address_list ($headers->from) : array ()
 				);
 
 				foreach ($targets as $target)
