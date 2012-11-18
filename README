@@ -4,7 +4,7 @@
 #
 # Purpose: Enable manual input of "From:" field input with a button next to
 #          identities list, and detect mails sent from a virtual address.
-# Version: 1.2
+# Version: 1.3
 # Author:  Rémi Caput
 # Contact: roundcube.net [at] mirari.fr
 #
