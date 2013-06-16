@@ -1,17 +1,8 @@
-###############################################################################
-#
-# Custom From plugin for RoundCube Webmail
-#
-# Purpose: Enable manual input of "From:" field input with a button next to
-#          identities list, and detect mails sent from a virtual address.
-# Version: 1.3
-# Author:  Rémi Caput
-# Contact: roundcube.net [at] mirari.fr
-#
-###############################################################################
+Custom-From README file
+=======================
 
-Description
------------
+Overview
+--------
 
 This plugin adds a blue button to the compose screen, next to the identities
 selection dropdown. By clicking it, a textbox will replace the dropdown,
@@ -22,8 +13,8 @@ When replying to an e-mail sent to you through an address not in your
 identities list, plugin will automatically fire and set "From:" header to the
 address the original e-mail was sent to.
 
-Installation
-------------
+Install
+-------
 
 Copy "custom_from" folder to your RoundCube "plugins" directory, then add a
 reference to this plugin in your "config/main.inc.php" file. Ensure that your
