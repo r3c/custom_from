@@ -115,7 +115,7 @@ class	custom_from extends rcube_plugin
 						{
 							if ($identity['domain'] == $recipient['domain'])
 							{
-								$address = $recipient['name'] ? ($recipient['name'] . ' <' . $email . '>') : $email;
+								$address = $identity['name'] ? ($identity['name'] . ' <' . $email . '>') : $email;
 								$level = 2;
 							}
 						}
