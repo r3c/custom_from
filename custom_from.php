@@ -20,6 +20,24 @@ class	custom_from extends rcube_plugin
 		$this->add_texts ('localization', true);
 		$this->add_hook ('message_compose', array ($this, 'message_compose'));
 		$this->add_hook ('render_page', array ($this, 'render_page'));
+		$this->add_hook('storage_init', array($this, 'storage_init'));
+	}
+
+	/**
+	** Adds additional headers to supported headers list
+	*/
+	function storage_init($p)
+	{
+		$rcmail = rcmail::get_instance();
+		$this->load_config ();
+		$definitive = $rcmail->config->get('custom_from_definitive_to', null);
+
+		if ($definitive !== null)
+		{
+			$p['fetch_headers'] = trim($p['fetch_headers']) . ' ' . trim($definitive);
+		}
+
+		return $p;
 	}
 
 	/*
@@ -34,6 +52,7 @@ class	custom_from extends rcube_plugin
 		$address = null;
 		$rcmail = rcmail::get_instance ();
 		$this->load_config ();
+		$definitive = $rcmail->config->get('custom_from_definitive_to', 'Bogus-NonExistent-Header-' . sha1(time()));
 
 		if (isset ($params['param']['reply_uid']))
 			$message = $params['param']['reply_uid'];
@@ -68,7 +87,7 @@ class	custom_from extends rcube_plugin
 					isset ($headers->to) ? $IMAP->decode_address_list ($headers->to) : array (),
 					isset ($headers->cc) ? $IMAP->decode_address_list ($headers->cc) : array (),
 					isset ($headers->cci) ? $IMAP->decode_address_list ($headers->cci) : array (),
-					isset ($headers->from) ? $IMAP->decode_address_list ($headers->from) : array ()
+					isset ($headers->others[strtolower($definitive)]) ? $IMAP->decode_address_list ('<' . $headers->others[strtolower($definitive)] . '>') : array ()
 				);
 
 				foreach ($targets as $target)
@@ -115,7 +134,7 @@ class	custom_from extends rcube_plugin
 						{
 							if ($identity['domain'] == $recipient['domain'])
 							{
-								$address = $recipient['name'] ? ($recipient['name'] . ' <' . $email . '>') : $email;
+								$address = $identity['name'] ? ($identity['name'] . ' <' . $email . '>') : $email;
 								$level = 2;
 							}
 						}
@@ -124,7 +143,7 @@ class	custom_from extends rcube_plugin
 					// Relevance level 1: no match found
 					if ($level < 1)
 					{
-						$address = $recipient['name'] ? ($recipient['name'] . ' <' . $email . '>') : $email;
+						$address = $identity['name'] ? ($identity['name'] . ' <' . $email . '>') : $email;
 						$level = 1;
 					}
 				}
