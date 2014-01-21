@@ -7,4 +7,11 @@
 */
 //$rcmail_config['custom_from_compose_auto'] = true;
 
+/*
+** If your MTA adds a header that definitively states which address email was
+** send to, then we can use this as a fallback.
+** e.g. Postfix adds 'X-Original-To' to all incoming emails.
+*/
+//$rcmail_config['custom_from_definitive_to'] = 'X-Original-To';
+
 ?>
