@@ -8,8 +8,6 @@
 
 class	custom_from extends rcube_plugin
 {
-	private	$from = null;
-
 	/*
 	** Initialize plugin.
 	*/
@@ -20,24 +18,27 @@ class	custom_from extends rcube_plugin
 		$this->add_texts ('localization', true);
 		$this->add_hook ('message_compose', array ($this, 'message_compose'));
 		$this->add_hook ('render_page', array ($this, 'render_page'));
-		$this->add_hook('storage_init', array($this, 'storage_init'));
+		$this->add_hook ('storage_init', array ($this, 'storage_init'));
 	}
 
 	/**
-	** Adds additional headers to supported headers list
+	** Adds additional headers to supported headers list.
 	*/
-	function storage_init($p)
+	public function storage_init ($params)
 	{
-		$rcmail = rcmail::get_instance();
 		$this->load_config ();
-		$definitive = $rcmail->config->get('custom_from_definitive_to', null);
 
-		if ($definitive !== null)
+		$excludes = array_flip (array ('cc', 'cci', 'from', 'to'));
+		$rcmail = rcmail::get_instance ();
+		$rules = $this->parse_headers ($rcmail->config->get ('custom_from_header_rules', 'X-Original-To=;to=;cc=;cci=;from='));
+
+		foreach ($rules as $header => $value)
 		{
-			$p['fetch_headers'] = trim($p['fetch_headers']) . ' ' . trim($definitive);
+			if (!isset ($excludes[$header]))
+				$params['fetch_headers'] = $params['fetch_headers'] . ' ' . $header;
 		}
 
-		return $p;
+		return $params;
 	}
 
 	/*
@@ -49,10 +50,10 @@ class	custom_from extends rcube_plugin
 		global	$IMAP;
 		global	$USER;
 
+		$this->load_config ();
+
 		$address = null;
 		$rcmail = rcmail::get_instance ();
-		$this->load_config ();
-		$definitive = $rcmail->config->get('custom_from_definitive_to', 'Bogus-NonExistent-Header-' . sha1(time()));
 
 		if (isset ($params['param']['reply_uid']))
 			$message = $params['param']['reply_uid'];
@@ -78,31 +79,60 @@ class	custom_from extends rcube_plugin
 
 			if ($headers !== null)
 			{
-				$identities = array ();
+				// Browse headers where addresses will be fetched from
 				$recipients = array ();
+				$rules = $this->parse_headers ($rcmail->config->get ('custom_from_header_rules', 'X-Original-To=deo;to=deo;cc=deo;cci=deo;from=de'));
 
-				// Decode recipients from e-mail headers
-				$targets = array_merge
-				(
-					isset ($headers->to) ? $IMAP->decode_address_list ($headers->to) : array (),
-					isset ($headers->cc) ? $IMAP->decode_address_list ($headers->cc) : array (),
-					isset ($headers->cci) ? $IMAP->decode_address_list ($headers->cci) : array (),
-					isset ($headers->others[strtolower($definitive)]) ? $IMAP->decode_address_list ('<' . $headers->others[strtolower($definitive)] . '>') : array ()
-				);
-
-				foreach ($targets as $target)
+				foreach ($rules as $header => $rule)
 				{
-					if (isset ($target['mailto']))
+					switch ($header)
 					{
-						$recipients[$target['mailto']] = array
-						(
-							'domain'	=> preg_replace ('/^[^@]*@(.*)$/', '$1', $target['mailto']),
-							'name'		=> $target['name']
-						);
+						case 'cc':
+							$addresses = isset ($headers->cc) ? $IMAP->decode_address_list ($headers->cc) : array ();
+
+							break;
+
+						case 'cci':
+							$addresses = isset ($headers->cci) ? $IMAP->decode_address_list ($headers->cci) : array ();
+
+							break;
+
+						case 'from':
+							$addresses = isset ($headers->from) ? $IMAP->decode_address_list ($headers->from) : array ();
+
+							break;
+
+						case 'to':
+							$addresses = isset ($headers->to) ? $IMAP->decode_address_list ($headers->to) : array ();
+
+							break;
+
+						default:
+							$addresses = isset ($headers->others[$header]) ? $IMAP->decode_address_list ('<' . $headers->others[$header] . '>') : array ();
+
+							break;
+					}
+
+					// Decode recipients and matching rules from retrieved addresses
+					foreach ($addresses as $address)
+					{
+						if (isset ($address['mailto']))
+						{
+							$recipients[$address['mailto']] = array
+							(
+								'domain'		=> preg_replace ('/^[^@]*@(.*)$/', '$1', $address['mailto']),
+								'match_domain'	=> strpos ($rule, 'd') !== false,
+								'match_exact'	=> strpos ($rule, 'e') !== false,
+								'match_other'	=> strpos ($rule, 'o') !== false,
+								'name'			=> $address['name']
+							);
+						}
 					}
 				}
 
 				// Get user identities list
+				$identities = array ();
+
 				foreach ($USER->list_identities () as $identity)
 				{
 					$identities[$identity['email']] = array
@@ -113,38 +143,35 @@ class	custom_from extends rcube_plugin
 				}
 
 				// Find best possible match from recipients and identities
-				$level = 0;
+				$score = 0;
 
 				foreach ($recipients as $email => $recipient)
 				{
-					// Relevance level 3: exact match found in identities
-					if ($level < 3)
+					// Relevance score 3: exact match found in identities
+					if ($score < 3 && $recipient['match_exact'] && isset ($identities[$email]))
 					{
-						if (isset ($identities[$email]))
-						{
-							$address = null;
-							$level = 3;
-						}
+						$address = null;
+						$score = 3;
 					}
 
-					// Relevance level 2: domain match found in identities
-					if ($level < 2)
+					// Relevance score 2: domain match found in identities
+					if ($score < 2 && $recipient['match_domain'])
 					{
 						foreach ($identities as $identity)
 						{
-							if ($identity['domain'] == $recipient['domain'])
+							if ($identity['domain'] === $recipient['domain'])
 							{
 								$address = $identity['name'] ? ($identity['name'] . ' <' . $email . '>') : $email;
-								$level = 2;
+								$score = 2;
 							}
 						}
 					}
 
-					// Relevance level 1: no match found
-					if ($level < 1)
+					// Relevance score 1: no match found
+					if ($score < 1 && $recipient['match_other'])
 					{
-						$address = $identity['name'] ? ($identity['name'] . ' <' . $email . '>') : $email;
-						$level = 1;
+						$address = $recipient['name'] ? ($recipient['name'] . ' <' . $email . '>') : $email;
+						$score = 1;
 					}
 				}
 			}
@@ -170,6 +197,21 @@ class	custom_from extends rcube_plugin
 		}
 
 		return $params;
+	}
+
+	private function parse_headers ($input)
+	{
+		$headers = array ();
+
+		foreach (explode (';', $input) as $header)
+		{
+			$fields = explode ('=', $header, 2);
+
+			if (count ($fields) === 2)
+				$headers[strtolower (trim ($fields[0]))] = strtolower (trim ($fields[1]));
+		}
+
+		return $headers;
 	}
 }
 
