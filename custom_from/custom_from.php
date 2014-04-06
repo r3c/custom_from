@@ -2,8 +2,13 @@
 
 /*
 ** Plugin custom_from for RoundcubeMail
-**  - Description: replace dropdown by textbox to allow "From:" header input
-**  - Author: Remi Caput - roundcube.net@mirari.fr
+**
+** Description: replace dropdown by textbox to allow "From:" header input
+**
+** @version 1.5
+** @license MIT
+** @author Remi Caput
+** @url https://github.com/r3c/Custom-From
 */
 
 class	custom_from extends rcube_plugin
@@ -13,8 +18,6 @@ class	custom_from extends rcube_plugin
 	*/
 	public function	init ()
 	{
-	    $app = rcmail::get_instance ();
-
 		$this->add_texts ('localization', true);
 		$this->add_hook ('message_compose', array ($this, 'message_compose'));
 		$this->add_hook ('render_page', array ($this, 'render_page'));
