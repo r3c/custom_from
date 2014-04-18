@@ -146,6 +146,7 @@ class	custom_from extends rcube_plugin
 				}
 
 				// Find best possible match from recipients and identities
+				$address = null;
 				$score = 0;
 
 				foreach ($recipients as $email => $recipient)
