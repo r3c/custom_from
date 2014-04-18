@@ -111,7 +111,7 @@ class	custom_from extends rcube_plugin
 							break;
 
 						default:
-							$addresses = isset ($headers->others[$header]) ? $IMAP->decode_address_list ('<' . $headers->others[$header] . '>') : array ();
+							$addresses = isset ($headers->others[$header]) ? $IMAP->decode_address_list ($headers->others[$header]) : array ();
 
 							break;
 					}
