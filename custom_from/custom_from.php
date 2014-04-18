@@ -38,7 +38,7 @@ class	custom_from extends rcube_plugin
 		foreach ($rules as $header => $value)
 		{
 			if (!isset ($excludes[$header]))
-				$params['fetch_headers'] = $params['fetch_headers'] . ' ' . $header;
+				$params['fetch_headers'] = trim($params['fetch_headers'] . ' ' . $header);
 		}
 
 		return $params;
