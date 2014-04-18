@@ -121,8 +121,9 @@ class	custom_from extends rcube_plugin
 					{
 						if (isset ($address['mailto']))
 						{
-							$recipients[$address['mailto']] = array
+							$recipients[] = array
 							(
+								'mailto'		=> $address['mailto'],
 								'domain'		=> preg_replace ('/^[^@]*@(.*)$/', '$1', $address['mailto']),
 								'match_domain'	=> strpos ($rule, 'd') !== false,
 								'match_exact'	=> strpos ($rule, 'e') !== false,
@@ -149,8 +150,10 @@ class	custom_from extends rcube_plugin
 				$address = null;
 				$score = 0;
 
-				foreach ($recipients as $email => $recipient)
+				foreach ($recipients as $recipient)
 				{
+					$email = $recipient['mailto'];
+					
 					// Relevance score 3: exact match found in identities
 					if ($score < 3 && $recipient['match_exact'] && isset ($identities[$email]))
 					{
