@@ -30,3 +30,4 @@ Thanks
 
 - dwurf (https://github.com/dwurf) for the globals $IMAP and $USER fix
 - Peter Dey (https://github.com/peterdey) for the custom header feature
+- kermit-the-frog (https://github.com/kermit-the-frog) for various bugfixes

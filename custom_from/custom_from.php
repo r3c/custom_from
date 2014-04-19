@@ -5,7 +5,7 @@
 **
 ** Description: replace dropdown by textbox to allow "From:" header input
 **
-** @version 1.5
+** @version 1.6
 ** @license MIT
 ** @author Remi Caput
 ** @url https://github.com/r3c/Custom-From
@@ -13,6 +13,8 @@
 
 class	custom_from extends rcube_plugin
 {
+	const HEADER_RULES = 'X-Original-To=deo;to=deo;cc=deo;cci=deo;from=de';
+
 	/*
 	** Initialize plugin.
 	*/
@@ -33,12 +35,12 @@ class	custom_from extends rcube_plugin
 
 		$excludes = array_flip (array ('cc', 'cci', 'from', 'to'));
 		$rcmail = rcmail::get_instance ();
-		$rules = $this->parse_headers ($rcmail->config->get ('custom_from_header_rules', 'X-Original-To=;to=;cc=;cci=;from='));
+		$rules = $this->parse_headers ($rcmail->config->get ('custom_from_header_rules', self::HEADER_RULES));
 
 		foreach ($rules as $header => $value)
 		{
 			if (!isset ($excludes[$header]))
-				$params['fetch_headers'] = trim($params['fetch_headers'] . ' ' . $header);
+				$params['fetch_headers'] = trim ($params['fetch_headers']) . ' ' . $header;
 		}
 
 		return $params;
@@ -84,7 +86,7 @@ class	custom_from extends rcube_plugin
 			{
 				// Browse headers where addresses will be fetched from
 				$recipients = array ();
-				$rules = $this->parse_headers ($rcmail->config->get ('custom_from_header_rules', 'X-Original-To=deo;to=deo;cc=deo;cci=deo;from=de'));
+				$rules = $this->parse_headers ($rcmail->config->get ('custom_from_header_rules', self::HEADER_RULES));
 
 				foreach ($rules as $header => $rule)
 				{
@@ -121,10 +123,12 @@ class	custom_from extends rcube_plugin
 					{
 						if (isset ($address['mailto']))
 						{
+							$email = $address['mailto'];
+
 							$recipients[] = array
 							(
-								'mailto'		=> $address['mailto'],
-								'domain'		=> preg_replace ('/^[^@]*@(.*)$/', '$1', $address['mailto']),
+								'domain'		=> preg_replace ('/^[^@]*@(.*)$/', '$1', $email),
+								'email'			=> $email,
 								'match_domain'	=> strpos ($rule, 'd') !== false,
 								'match_exact'	=> strpos ($rule, 'e') !== false,
 								'match_other'	=> strpos ($rule, 'o') !== false,
@@ -152,8 +156,8 @@ class	custom_from extends rcube_plugin
 
 				foreach ($recipients as $recipient)
 				{
-					$email = $recipient['mailto'];
-					
+					$email = $recipient['email'];
+
 					// Relevance score 3: exact match found in identities
 					if ($score < 3 && $recipient['match_exact'] && isset ($identities[$email]))
 					{
