@@ -170,7 +170,7 @@ class	custom_from extends rcube_plugin
 					{
 						foreach ($identities as $identity)
 						{
-							if ($identity['domain'] === $recipient['domain'])
+							if (strcasecmp($identity['domain'], $recipient['domain']) == 0)
 							{
 								$address = $identity['name'] ? ($identity['name'] . ' <' . $email . '>') : $email;
 								$score = 2;
