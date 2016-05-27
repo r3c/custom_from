@@ -91,27 +91,27 @@ class	custom_from extends rcube_plugin
 					switch ($header)
 					{
 						case 'cc':
-							$addresses = isset ($headers->cc) ? $IMAP->decode_address_list ($headers->cc) : array ();
+							$addresses = isset ($headers->cc) ? rcube_mime::decode_address_list ($headers->cc) : array ();
 
 							break;
 
 						case 'cci':
-							$addresses = isset ($headers->cci) ? $IMAP->decode_address_list ($headers->cci) : array ();
+							$addresses = isset ($headers->cci) ? rcube_mime::decode_address_list ($headers->cci) : array ();
 
 							break;
 
 						case 'from':
-							$addresses = isset ($headers->from) ? $IMAP->decode_address_list ($headers->from) : array ();
+							$addresses = isset ($headers->from) ? rcube_mime::decode_address_list ($headers->from) : array ();
 
 							break;
 
 						case 'to':
-							$addresses = isset ($headers->to) ? $IMAP->decode_address_list ($headers->to) : array ();
+							$addresses = isset ($headers->to) ? rcube_mime::decode_address_list ($headers->to) : array ();
 
 							break;
 
 						default:
-							$addresses = isset ($headers->others[$header]) ? $IMAP->decode_address_list ('<' . $headers->others[$header] . '>') : array ();
+							$addresses = isset ($headers->others[$header]) ? rcube_mime::decode_address_list ('<' . $headers->others[$header] . '>') : array ();
 
 							break;
 					}
