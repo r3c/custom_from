@@ -5,7 +5,7 @@
 **
 ** Description: replace dropdown by textbox to allow "From:" header input
 **
-** @version 1.6
+** @version 1.7
 ** @license MIT
 ** @author Remi Caput
 ** @url https://github.com/r3c/Custom-From
@@ -14,9 +14,9 @@
 class	custom_from extends rcube_plugin
 {
 	const HEADER_RULES = 'X-Original-To=deo;to=deo;cc=deo;cci=deo;from=de';
-
 	
-	static protected $default_headers = array('cc', 'cci', 'from', 'to');
+	private static $default_headers = array ('cc', 'cci', 'from', 'to');
+
 	/*
 	** Initialize plugin.
 	*/
@@ -92,16 +92,17 @@ class	custom_from extends rcube_plugin
 				
 				foreach ($rules as $header => $rule)
 				{
-					if (!class_exists('rcube_mime')) 
-					{ // RC < 0.8 compatibility code
-						if(in_array ($header, self::$default_headers))
+					// RC < 0.8 compatibility code
+					if (!class_exists ('rcube_mime'))
+					{
+						if (in_array ($header, self::$default_headers))
 							$addresses = isset ($headers->{$header}) ? $IMAP->decode_address_list ($headers->{$header}) : array ();
 						else
-							$addresses = isset ($headers->others[$header]) ? $IMAP->decode_address_list ('<' . $headers->others[$header] . '>') : array ();
+							$addresses = isset ($headers->others[$header]) ? $IMAP->decode_address_list ($headers->others[$header]) : array ();
 					}
 					else
 					{
-						if(in_array ($header, self::$default_headers))
+						if (in_array ($header, self::$default_headers))
 							$addresses = isset ($headers->{$header}) ? rcube_mime::decode_address_list ($headers->{$header}) : array ();
 						else
 							$addresses = isset ($headers->others[$header]) ? rcube_mime::decode_address_list ($headers->others[$header]) : array ();
