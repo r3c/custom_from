@@ -15,6 +15,8 @@ class	custom_from extends rcube_plugin
 {
 	const HEADER_RULES = 'X-Original-To=deo;to=deo;cc=deo;cci=deo;from=de';
 
+	
+	static protected $default_headers = array('cc', 'cci', 'from', 'to');
 	/*
 	** Initialize plugin.
 	*/
@@ -33,7 +35,7 @@ class	custom_from extends rcube_plugin
 	{
 		$this->load_config ();
 
-		$excludes = array_flip (array ('cc', 'cci', 'from', 'to'));
+		$excludes = array_flip (self::$default_headers);
 		$rcmail = rcmail::get_instance ();
 		$rules = $this->parse_headers ($rcmail->config->get ('custom_from_header_rules', self::HEADER_RULES));
 
@@ -87,35 +89,22 @@ class	custom_from extends rcube_plugin
 				// Browse headers where addresses will be fetched from
 				$recipients = array ();
 				$rules = $this->parse_headers ($rcmail->config->get ('custom_from_header_rules', self::HEADER_RULES));
-
+				
 				foreach ($rules as $header => $rule)
 				{
-					switch ($header)
+					if (!class_exists('rcube_mime')) 
+					{ // RC < 0.8 compatibility code
+						if(in_array ($header, self::$default_headers))
+							$addresses = isset ($headers->{$header}) ? $IMAP->decode_address_list ($headers->{$header}) : array ();
+						else
+							$addresses = isset ($headers->others[$header]) ? $IMAP->decode_address_list ('<' . $headers->others[$header] . '>') : array ();
+					}
+					else
 					{
-						case 'cc':
-							$addresses = isset ($headers->cc) ? rcube_mime::decode_address_list ($headers->cc) : array ();
-
-							break;
-
-						case 'cci':
-							$addresses = isset ($headers->cci) ? rcube_mime::decode_address_list ($headers->cci) : array ();
-
-							break;
-
-						case 'from':
-							$addresses = isset ($headers->from) ? rcube_mime::decode_address_list ($headers->from) : array ();
-
-							break;
-
-						case 'to':
-							$addresses = isset ($headers->to) ? rcube_mime::decode_address_list ($headers->to) : array ();
-
-							break;
-
-						default:
+						if(in_array ($header, self::$default_headers))
+							$addresses = isset ($headers->{$header}) ? rcube_mime::decode_address_list ($headers->{$header}) : array ();
+						else
 							$addresses = isset ($headers->others[$header]) ? rcube_mime::decode_address_list ($headers->others[$header]) : array ();
-
-							break;
 					}
 
 					// Decode recipients and matching rules from retrieved addresses
