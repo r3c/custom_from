@@ -26,11 +26,11 @@ Clone repository content to a `custom_from` folder inside your RoundCube
 `plugins` directory, so that file `custom_from.php` file can be found at
 `<RoundCube install folder>/plugins/custom_from/custom_from.php`.
 
-cd <RoundCube install folder>
-git clone https://github.com/r3c/CustomFrom.git plugins/custom_from/
+    cd <RoundCube install folder>
+    git clone https://github.com/r3c/custom_from.git
 
 Then add a reference to this plugin in RoundCube plugins list located in
-`<RoundCube install folder>config/main.inc.php` configuration file (update the
+`<RoundCube install folder>/config/main.inc.php` configuration file (update the
 `$config['plugins']` variable). Ensure your web user has read access to the
 plugin directory and all files in it.
 
