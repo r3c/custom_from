@@ -4,7 +4,7 @@
 	"type":			"roundcube-plugin",
 	"description":	"Allow manual sender address input ('From' header) when composing",
 	"keywords":		["custom", "from", "sender", "address", "header", "compose"],
-	"homepage":		"https://github.com/r3c/CustomFrom",
+	"homepage":		"https://github.com/r3c/custom_from",
 	"license":		"MIT",
 	"authors":		[
 		{
