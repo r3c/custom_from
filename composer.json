@@ -1,6 +1,6 @@
 {
 	"name":			"roundcube/custom-from",
-	"version":		"1.6.0",
+	"version":		"1.6.1",
 	"type":			"roundcube-plugin",
 	"description":	"Allow manual sender address input ('From' header) when composing",
 	"keywords":		["custom", "from", "sender", "address", "header", "compose"],

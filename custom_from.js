@@ -38,6 +38,7 @@ if (window.rcmail)
 			(
 				$('<input>')
 					.addClass('custom_from')
+					.addClass('form-control')
 					.attr('id', 'custom_from_text')
 					.attr('name', '_from')
 					.attr('onchange', drop.attr('onchange'))
@@ -56,34 +57,46 @@ if (window.rcmail)
 		$('#_from')
 			.after
 			(
-				$('<a>')
-					.addClass('custom_from_hide')
-					.addClass('custom_from_off')
-					.attr('id', 'rcmbtn_custom_from_off')
-					.attr('href', '#')
-					.attr('title', rcmail.gettext('custom_from_button_off', 'custom_from'))
+				$('<span>')
+					.addClass('input-group-append')
 					.html
 					(
-						$('<img>')
-							.attr('alt', 'custom_from_off')
-							.attr('src', 'plugins/custom_from/images/custom_from_off.png')
+						$('<a>')
+							.addClass('custom_from_hide')
+							.addClass('custom_from_off')
+							.addClass('input-group-text')
+							.attr('id', 'rcmbtn_custom_from_off')
+							.attr('href', '#')
+							.attr('title', rcmail.gettext('custom_from_button_off', 'custom_from'))
+							.html
+							(
+								$('<img>')
+									.attr('alt', 'custom_from_off')
+									.attr('src', 'plugins/custom_from/images/custom_from_off.png')
+							)
+							.bind('click', custom_from_off)
 					)
-					.bind('click', custom_from_off)
 			)
 			.after
 			(
-				$('<a>')
-					.addClass('custom_from_on')
-					.attr('id', 'rcmbtn_custom_from_on')
-					.attr('href', '#')
-					.attr('title', rcmail.gettext('custom_from_button_on', 'custom_from'))
+				$('<span>')
+					.addClass('input-group-append')
 					.html
 					(
-						$('<img>')
-							.attr('alt', 'custom_from_on')
-							.attr('src', 'plugins/custom_from/images/custom_from_on.png')
+						$('<a>')
+							.addClass('custom_from_on')
+							.addClass('input-group-text')
+							.attr('id', 'rcmbtn_custom_from_on')
+							.attr('href', '#')
+							.attr('title', rcmail.gettext('custom_from_button_on', 'custom_from'))
+							.html
+							(
+								$('<img>')
+									.attr('alt', 'custom_from_on')
+									.attr('src', 'plugins/custom_from/images/custom_from_on.png')
+							)
+							.bind('click', custom_from_on)
 					)
-					.bind('click', custom_from_on)
 			)
 	});
 }
