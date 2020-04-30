@@ -25,5 +25,3 @@
 ** e-mail addresses except for the "o" rule which is disabled on "from" header.
 */
 //$rcmail_config['custom_from_header_rules'] = 'X-Original-To=deo;to=deo;cc=deo;cci=deo;from=de';
-
-?>

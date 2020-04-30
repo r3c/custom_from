@@ -1,13 +1,10 @@
-
 /*
 ** Plugin custom_from for RoundcubeMail
 **  - Plugin script
 */
 
-if (window.rcmail)
-{
-	var custom_from_off = function (event)
-	{
+if (window.rcmail) {
+	var custom_from_off = function (event) {
 		$('a#rcmbtn_custom_from_off')
 			.addClass('custom_from_hide')
 
@@ -22,12 +19,10 @@ if (window.rcmail)
 			.remove();
 	};
 
-	var custom_from_on = function (event, value)
-	{
-		var	drop = $('select#_from');
+	var custom_from_on = function (event, value) {
+		var drop = $('select#_from');
 
-		if (drop.length > 0)
-		{
+		if (drop.length > 0) {
 			$('a#rcmbtn_custom_from_off')
 				.removeClass('custom_from_hide')
 
@@ -35,16 +30,16 @@ if (window.rcmail)
 				.addClass('custom_from_hide')
 
 			drop.after
-			(
-				$('<input>')
-					.addClass('custom_from')
-					.addClass('form-control')
-					.attr('id', 'custom_from_text')
-					.attr('name', '_from')
-					.attr('onchange', drop.attr('onchange'))
-					.attr('type', 'text')
-					.attr('value', value || drop.find('option:selected')[0].text)
-			);
+				(
+					$('<input>')
+						.addClass('custom_from')
+						.addClass('form-control')
+						.attr('id', 'custom_from_text')
+						.attr('name', '_from')
+						.attr('onchange', drop.attr('onchange'))
+						.attr('type', 'text')
+						.attr('value', value || drop.find('option:selected')[0].text)
+				);
 
 			drop
 				.removeAttr('name', '')
@@ -52,8 +47,7 @@ if (window.rcmail)
 		}
 	};
 
-	rcmail.addEventListener('init', function (event)
-	{
+	rcmail.addEventListener('init', function (event) {
 		$('#_from')
 			.after
 			(
