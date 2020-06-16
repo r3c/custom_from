@@ -17,6 +17,9 @@ if (window.rcmail) {
 
 		$('input#custom_from_text')
 			.remove();
+
+		$('#compose-div')
+			.css('top', '-=18');
 	};
 
 	var custom_from_on = function (event, value) {
@@ -44,6 +47,9 @@ if (window.rcmail) {
 			drop
 				.removeAttr('name', '')
 				.css('display', 'none');
+
+			$('#compose-div')
+				.css('top', '+=18');
 		}
 	};
 
