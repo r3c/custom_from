@@ -4,99 +4,75 @@
 */
 
 if (window.rcmail) {
-	var custom_from_off = function (event) {
-		$('a#rcmbtn_custom_from_off')
-			.addClass('custom_from_hide')
+	var customFromToggle = (function () {
+		// UI elements
+		var button = $('<a class="input-group-text" href="#">')
+			.attr('title', textEnable)
+			.html($('<img alt="Custom From Toggle">').attr('src', iconEnable));
+		var iconDisable = 'plugins/custom_from/images/custom_from_off.png';
+		var iconEnable = 'plugins/custom_from/images/custom_from_on.png';
+		var textDisable = rcmail.gettext('custom_from_button_off', 'custom_from');
+		var textEnable = rcmail.gettext('custom_from_button_on', 'custom_from');
 
-		$('a#rcmbtn_custom_from_on')
-			.removeClass('custom_from_hide')
+		// Plugin state
+		var disabled = true;
+		var senderSelect = [];
+		var senderTextbox;
 
-		$('select#_from')
-			.attr('name', '_from')
-			.css('display', 'inline');
+		// Feature toggle handler
+		var toggle = function (event, value) {
+			if (senderSelect.length < 1) {
+				return;
+			}
 
-		$('input#custom_from_text')
-			.remove();
+			if (disabled) {
+				button
+					.attr('title', textDisable)
+					.find('img').attr('src', iconDisable);
 
-		$('#compose-div')
-			.css('top', '-=18');
-	};
+				senderTextbox = $('<input class="custom_from form-control" name="_from" type="text">')
+					.attr('onchange', senderSelect.attr('onchange'))
+					.attr('value', value || senderSelect.find('option:selected')[0].text);
 
-	var custom_from_on = function (event, value) {
-		var drop = $('select#_from');
+				senderSelect
+					.before(senderTextbox)
+					.removeAttr('name')
+					.css('display', 'none');
 
-		if (drop.length > 0) {
-			$('a#rcmbtn_custom_from_off')
-				.removeClass('custom_from_hide')
+				// Fix for Classic skin only
+				// See: https://github.com/r3c/custom_from/issues/18
+				$('#compose-div')
+					.css('top', '+=18');
+			}
+			else {
+				button
+					.attr('title', textEnable)
+					.find('img').attr('src', iconEnable);
 
-			$('a#rcmbtn_custom_from_on')
-				.addClass('custom_from_hide')
+				senderTextbox.remove();
 
-			drop.after
-				(
-					$('<input>')
-						.addClass('custom_from')
-						.addClass('form-control')
-						.attr('id', 'custom_from_text')
-						.attr('name', '_from')
-						.attr('onchange', drop.attr('onchange'))
-						.attr('type', 'text')
-						.attr('value', value || drop.find('option:selected')[0].text)
-				);
+				senderSelect
+					.attr('name', '_from')
+					.css('display', 'inline');
 
-			drop
-				.removeAttr('name', '')
-				.css('display', 'none');
+				// Cancel fix for Classic skin only (see above)
+				$('#compose-div')
+					.css('top', '-=18');
+			}
 
-			$('#compose-div')
-				.css('top', '+=18');
-		}
-	};
+			disabled = !disabled;
+		};
 
-	rcmail.addEventListener('init', function (event) {
-		$('#_from')
-			.after
-			(
-				$('<span>')
-					.addClass('input-group-append')
-					.html
-					(
-						$('<a>')
-							.addClass('custom_from_hide')
-							.addClass('custom_from_off')
-							.addClass('input-group-text')
-							.attr('id', 'rcmbtn_custom_from_off')
-							.attr('href', '#')
-							.attr('title', rcmail.gettext('custom_from_button_off', 'custom_from'))
-							.html
-							(
-								$('<img>')
-									.attr('alt', 'custom_from_off')
-									.attr('src', 'plugins/custom_from/images/custom_from_off.png')
-							)
-							.bind('click', custom_from_off)
-					)
-			)
-			.after
-			(
-				$('<span>')
-					.addClass('input-group-append')
-					.html
-					(
-						$('<a>')
-							.addClass('custom_from_on')
-							.addClass('input-group-text')
-							.attr('id', 'rcmbtn_custom_from_on')
-							.attr('href', '#')
-							.attr('title', rcmail.gettext('custom_from_button_on', 'custom_from'))
-							.html
-							(
-								$('<img>')
-									.attr('alt', 'custom_from_on')
-									.attr('src', 'plugins/custom_from/images/custom_from_on.png')
-							)
-							.bind('click', custom_from_on)
-					)
-			)
-	});
+		// Toggle plugin on button click
+		button.bind('click', toggle);
+
+		// Enable plugin on Roundcube initialization
+		rcmail.addEventListener('init', function (event) {
+			senderSelect = $('select#_from');
+			senderSelect.after($('<span class="input-group-append">').html(button))
+		});
+
+		// Make toggle function visible from global scope
+		return toggle;
+	})();
 }

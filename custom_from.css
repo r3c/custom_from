@@ -1,9 +1,0 @@
-/*
-** Plugin custom_from for RoundcubeMail
-**  - Plugin CSS styles
-*/
-
-#compose-headers a.custom_from_hide,
-.compose-headers a.custom_from_hide {
-	display	: none;
-}

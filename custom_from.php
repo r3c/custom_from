@@ -176,10 +176,9 @@ class custom_from extends rcube_plugin
                 $value = str_replace(array('\\', '\''), array('\\\\', '\\\''), $_SESSION['custom_from']);
 
                 $rcmail = rcmail::get_instance();
-                $rcmail->output->add_footer('<script type="text/javascript">rcmail.addEventListener(\'init\', function (event) { custom_from_on(event, \'' . $value . '\'); });</script>');
+                $rcmail->output->add_footer('<script type="text/javascript">rcmail.addEventListener(\'init\', function (event) { customFromToggle(event, \'' . $value . '\'); });</script>');
             }
 
-            $this->include_stylesheet('custom_from.css');
             $this->include_script('custom_from.js');
         }
 
