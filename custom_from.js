@@ -6,13 +6,14 @@
 if (window.rcmail) {
 	var customFromToggle = (function () {
 		// UI elements
-		var button = $('<a class="input-group-text" href="#">')
-			.attr('title', textEnable)
-			.html($('<img alt="Custom From Toggle">').attr('src', iconEnable));
 		var iconDisable = 'plugins/custom_from/images/custom_from_off.png';
 		var iconEnable = 'plugins/custom_from/images/custom_from_on.png';
 		var textDisable = rcmail.gettext('custom_from_button_off', 'custom_from');
 		var textEnable = rcmail.gettext('custom_from_button_on', 'custom_from');
+
+		var button = $('<a class="input-group-text" href="#">')
+			.attr('title', textEnable)
+			.html($('<img alt="Custom From Toggle">').attr('src', iconEnable));
 
 		// Plugin state
 		var disabled = true;
