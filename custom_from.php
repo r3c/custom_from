@@ -14,12 +14,12 @@
 class custom_from extends rcube_plugin
 {
     const HEADER_RULES = 'X-Original-To=deo;to=deo;cc=deo;cci=deo;from=de';
-    
+
     private static $default_headers = array('cc', 'cci', 'from', 'to');
 
-    /*
-    ** Initialize plugin.
-    */
+    /**
+     ** Initialize plugin.
+     */
     public function init()
     {
         $this->add_texts('localization', true);
@@ -29,8 +29,8 @@ class custom_from extends rcube_plugin
     }
 
     /**
-    ** Adds additional headers to supported headers list.
-    */
+     ** Adds additional headers to supported headers list.
+     */
     public function storage_init($params)
     {
         $this->load_config();
@@ -48,14 +48,14 @@ class custom_from extends rcube_plugin
         return $params;
     }
 
-    /*
-    ** Enable custom "From:" field if mail being composed has been sent to an
-    ** address that looks like virtual (i.e. not in user identities list).
-    */
+    /**
+     ** Enable custom "From:" field if mail being composed has been sent to an
+     ** address that looks like virtual (i.e. not in user identities list).
+     */
     public function message_compose($params)
     {
-        global	$IMAP;
-        global	$USER;
+        global $IMAP;
+        global $USER;
 
         $this->load_config();
 
@@ -90,7 +90,7 @@ class custom_from extends rcube_plugin
                 // Browse headers where addresses will be fetched from
                 $recipients = array();
                 $rules = $this->parse_headers($rcmail->config->get('custom_from_header_rules', self::HEADER_RULES));
-                
+
                 foreach ($rules as $header => $rule) {
                     // RC < 0.8 compatibility code
                     if (!class_exists('rcube_mime')) {
@@ -113,12 +113,12 @@ class custom_from extends rcube_plugin
                             $email = $address['mailto'];
 
                             $recipients[] = array(
-                                'domain'		=> preg_replace('/^[^@]*@(.*)$/', '$1', $email),
-                                'email'			=> $email,
-                                'match_domain'	=> strpos($rule, 'd') !== false,
-                                'match_exact'	=> strpos($rule, 'e') !== false,
-                                'match_other'	=> strpos($rule, 'o') !== false,
-                                'name'			=> $address['name']
+                                'domain' => preg_replace('/^[^@]*@(.*)$/', '$1', $email),
+                                'email' => $email,
+                                'match_domain' => strpos($rule, 'd') !== false,
+                                'match_exact' => strpos($rule, 'e') !== false,
+                                'match_other' => strpos($rule, 'o') !== false,
+                                'name' => $address['name']
                             );
                         }
                     }
@@ -129,8 +129,8 @@ class custom_from extends rcube_plugin
 
                 foreach ($USER->list_identities() as $identity) {
                     $identities[$identity['email']] = array(
-                        'domain'	=> preg_replace('/^[^@]*@(.*)$/', '$1', $identity['email']),
-                        'name'		=> $identity['name']
+                        'domain' => preg_replace('/^[^@]*@(.*)$/', '$1', $identity['email']),
+                        'name' => $identity['name']
                     );
                 }
 
