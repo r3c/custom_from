@@ -13,7 +13,7 @@
 
 class custom_from extends rcube_plugin
 {
-    const HEADER_RULES = 'X-Original-To=deo;to=deo;cc=deo;cci=deo;from=de';
+    const DEFAULT_HEADER_RULES = 'X-Original-To=deo;to=deo;cc=deo;cci=deo;from=de';
 
     private static $default_headers = array('cc', 'cci', 'from', 'to');
 
@@ -37,9 +37,9 @@ class custom_from extends rcube_plugin
 
         $excludes = array_flip(self::$default_headers);
         $rcmail = rcmail::get_instance();
-        $rules = $this->parse_headers($rcmail->config->get('custom_from_header_rules', self::HEADER_RULES));
+        $rules = $this->get_rules($rcmail->config);
 
-        foreach ($rules as $header => $value) {
+        foreach (array_keys($rules) as $header) {
             if (!isset($excludes[$header])) {
                 $params['fetch_headers'] = (isset($params['fetch_headers']) && $params['fetch_headers'] !== '' ? $params['fetch_headers'] . ' ' : '') . $header;
             }
@@ -60,6 +60,7 @@ class custom_from extends rcube_plugin
         $this->load_config();
 
         $address = null;
+        $compose_id = $params['id'];
         $rcmail = rcmail::get_instance();
 
         if (isset($params['param']['reply_uid'])) {
@@ -89,7 +90,7 @@ class custom_from extends rcube_plugin
             if ($headers !== null) {
                 // Browse headers where addresses will be fetched from
                 $recipients = array();
-                $rules = $this->parse_headers($rcmail->config->get('custom_from_header_rules', self::HEADER_RULES));
+                $rules = $this->get_rules($rcmail->config);
 
                 foreach ($rules as $header => $rule) {
                     // RC < 0.8 compatibility code
@@ -166,17 +167,18 @@ class custom_from extends rcube_plugin
             }
         }
 
-        $_SESSION['custom_from'] = $address;
+        $this->set_state($compose_id, $address);
     }
 
     public function render_page($params)
     {
-        if ($params['template'] == 'compose') {
-            if (isset($_SESSION['custom_from'])) {
-                $value = str_replace(array('\\', '\''), array('\\\\', '\\\''), $_SESSION['custom_from']);
+        if ($params['template'] === 'compose') {
+            $compose_id = rcube_utils::get_input_value('_id', rcube_utils::INPUT_GET);
+            $address = $this->get_state($compose_id);
 
+            if ($address !== null) {
                 $rcmail = rcmail::get_instance();
-                $rcmail->output->add_footer('<script type="text/javascript">rcmail.addEventListener(\'init\', function (event) { customFromToggle(event, \'' . $value . '\'); });</script>');
+                $rcmail->output->add_footer('<script type="text/javascript">rcmail.addEventListener(\'init\', function (event) { customFromToggle(event, ' . json_encode($address) . '); });</script>');
             }
 
             $this->include_script('custom_from.js');
@@ -185,12 +187,13 @@ class custom_from extends rcube_plugin
         return $params;
     }
 
-    private function parse_headers($input)
+    private function get_rules($config)
     {
         $headers = array();
+        $value = $config->get('custom_from_header_rules', self::DEFAULT_HEADER_RULES);
 
-        foreach (explode(';', $input) as $header) {
-            $fields = explode('=', $header, 2);
+        foreach (explode(';', $value) as $pair) {
+            $fields = explode('=', $pair, 2);
 
             if (count($fields) === 2) {
                 $headers[strtolower(trim($fields[0]))] = strtolower(trim($fields[1]));
@@ -198,5 +201,15 @@ class custom_from extends rcube_plugin
         }
 
         return $headers;
+    }
+
+    private function get_state($compose_id)
+    {
+        return $compose_id !== null && isset($_SESSION['custom_from_' . $compose_id]) ? $_SESSION['custom_from_' . $compose_id] : null;
+    }
+
+    private function set_state($compose_id, $value)
+    {
+        $_SESSION['custom_from_' . $compose_id] = $value;
     }
 }
