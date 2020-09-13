@@ -152,7 +152,7 @@ class custom_from extends rcube_plugin
                     if ($score < 2 && $recipient['match_domain']) {
                         foreach ($identities as $identity) {
                             if (strcasecmp($identity['domain'], $recipient['domain']) == 0) {
-                                $address = $identity['name'] ? ($identity['name'] . ' <' . $email . '>') : $email;
+                                $address = format_email_recipient($email, $identity['name']);
                                 $score = 2;
                             }
                         }
@@ -160,7 +160,7 @@ class custom_from extends rcube_plugin
 
                     // Relevance score 1: no match found
                     if ($score < 1 && $recipient['match_other']) {
-                        $address = $recipient['name'] ? ($recipient['name'] . ' <' . $email . '>') : $email;
+                        $address = format_email_recipient($email, $recipient['name']);
                         $score = 1;
                     }
                 }
