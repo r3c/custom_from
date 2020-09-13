@@ -13,7 +13,7 @@
 
 class custom_from extends rcube_plugin
 {
-    const DEFAULT_HEADER_RULES = 'X-Original-To=deo;to=deo;cc=deo;cci=deo;from=de';
+    const DEFAULT_HEADER_RULES = 'X-Original-To=deo;To=de;Cc=de;Cci=de;From=de';
 
     private static $default_headers = array('cc', 'cci', 'from', 'to');
 

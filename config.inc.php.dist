@@ -16,12 +16,15 @@
 ** Format is 'header1=rule1;header2=rule2;...' where headerX is any e-mail
 ** header (you can use custom headers here) and ruleX a list of letters, each
 ** one identifying a matching rule you want to enable. Available rules are:
+**
 ** - e (exact):  an address found in headers can be used if it exactly matches
 **               one of your identities
 ** - d (domain): an address found in headers can be used if its domain matches
 **               one of your identities
 ** - o (other):  any address found in header can be used
-** By default all matching rules are enabled on most headers known to contain
-** e-mail addresses except for the "o" rule which is disabled on "from" header.
+**
+** By default only exact and domain matching rules are enabled on most headers
+** known to contain e-mail addresses, except for the "X-Original-To" header
+** where all rules are enabled.
 */
-//$rcmail_config['custom_from_header_rules'] = 'X-Original-To=deo;to=deo;cc=deo;cci=deo;from=de';
+//$rcmail_config['custom_from_header_rules'] = 'X-Original-To=deo;To=de;Cc=de;Cci=de;From=de';
