@@ -22,6 +22,7 @@ class custom_from extends rcube_plugin
     {
         $this->add_texts('localization', true);
         $this->add_hook('message_compose', array($this, 'message_compose'));
+        $this->add_hook('message_compose_body', array($this, 'message_compose_body'));
         $this->add_hook('render_page', array($this, 'render_page'));
         $this->add_hook('storage_init', array($this, 'storage_init'));
     }
@@ -137,6 +138,39 @@ class custom_from extends rcube_plugin
         }
 
         $this->set_state($compose_id, $address);
+    }
+
+    /**
+     * Remove selected virtual e-mail from message headers so it doesn't get
+     * copied to "cc" field (https://github.com/r3c/custom_from/issues/19).
+     * This implementation relies on how method "compose_header_value" from
+     * "rcmail_sendmail.php" is currently reading headers to build "cc" field
+     * value and is most probably not a good use of "message_compose_body" hook
+     * but there is currently no better place to introduce a dedicated hook
+     * (https://github.com/roundcube/roundcubemail/issues/7590).
+     */
+    public function message_compose_body($params)
+    {
+        global $COMPOSE;
+
+        $address = $this->get_state($COMPOSE['id']);
+        $message = $params['message'];
+        $rcmail = rcmail::get_instance();
+        $rules = $this->get_rules($rcmail->config);
+
+        foreach (array_keys($rules) as $header) {
+            $addresses_header = rcube_mime::decode_address_list($message->headers->{$header});
+
+            $addresses_filtered = array_filter($addresses_header, function ($test) use ($address) {
+                return $test['mailto'] !== $address;
+            });
+
+            $addresses_string = array_map(function ($address) {
+                return $address['string'];
+            }, $addresses_filtered);
+
+            $message->headers->{$header} = implode(', ', $addresses_string);
+        }
     }
 
     public function render_page($params)
