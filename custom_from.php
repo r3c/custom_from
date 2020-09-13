@@ -15,8 +15,6 @@ class custom_from extends rcube_plugin
 {
     const DEFAULT_HEADER_RULES = 'X-Original-To=deo;To=de;Cc=de;Cci=de;From=de';
 
-    private static $default_headers = array('cc', 'cci', 'from', 'to');
-
     /**
      ** Initialize plugin.
      */
@@ -35,14 +33,11 @@ class custom_from extends rcube_plugin
     {
         $this->load_config();
 
-        $excludes = array_flip(self::$default_headers);
         $rcmail = rcmail::get_instance();
         $rules = $this->get_rules($rcmail->config);
 
         foreach (array_keys($rules) as $header) {
-            if (!isset($excludes[$header])) {
-                $params['fetch_headers'] = (isset($params['fetch_headers']) && $params['fetch_headers'] !== '' ? $params['fetch_headers'] . ' ' : '') . $header;
-            }
+            $params['fetch_headers'] = (isset($params['fetch_headers']) && $params['fetch_headers'] !== '' ? $params['fetch_headers'] . ' ' : '') . $header;
         }
 
         return $params;
@@ -54,9 +49,6 @@ class custom_from extends rcube_plugin
      */
     public function message_compose($params)
     {
-        global $IMAP;
-        global $USER;
-
         $this->load_config();
 
         $address = null;
@@ -64,49 +56,26 @@ class custom_from extends rcube_plugin
         $rcmail = rcmail::get_instance();
 
         if (isset($params['param']['reply_uid'])) {
-            $message = $params['param']['reply_uid'];
+            $message_uid = $params['param']['reply_uid'];
         } elseif (isset($params['param']['forward_uid'])) {
-            $message = $params['param']['forward_uid'];
+            $message_uid = $params['param']['forward_uid'];
         } elseif (isset($params['param']['uid'])) {
-            $message = $params['param']['uid'];
+            $message_uid = $params['param']['uid'];
         } else {
-            $message = null;
+            $message_uid = null;
         }
 
-        if ($rcmail->config->get('custom_from_compose_auto', true) && $message !== null) {
-            // Newer versions of roundcube don't provide a global $IMAP or $USER variable
-            if (!isset($IMAP) && isset($rcmail->storage)) {
-                $IMAP = $rcmail->storage;
-            }
+        if ($rcmail->config->get('custom_from_compose_auto', true) && $message_uid !== null) {
+            $storage = $rcmail->get_storage();
+            $message = $storage->get_message($message_uid);
 
-            if (!isset($USER) && isset($rcmail->user)) {
-                $USER = $rcmail->user;
-            }
-
-            $IMAP->get_all_headers = true;
-
-            $headers = $IMAP->get_message($message);
-
-            if ($headers !== null) {
+            if ($message !== null) {
                 // Browse headers where addresses will be fetched from
                 $recipients = array();
                 $rules = $this->get_rules($rcmail->config);
 
                 foreach ($rules as $header => $rule) {
-                    // RC < 0.8 compatibility code
-                    if (!class_exists('rcube_mime')) {
-                        if (in_array($header, self::$default_headers)) {
-                            $addresses = isset($headers->{$header}) ? $IMAP->decode_address_list($headers->{$header}) : array();
-                        } else {
-                            $addresses = isset($headers->others[$header]) ? $IMAP->decode_address_list($headers->others[$header]) : array();
-                        }
-                    } else {
-                        if (in_array($header, self::$default_headers)) {
-                            $addresses = isset($headers->{$header}) ? rcube_mime::decode_address_list($headers->{$header}) : array();
-                        } else {
-                            $addresses = isset($headers->others[$header]) ? rcube_mime::decode_address_list($headers->others[$header]) : array();
-                        }
-                    }
+                    $addresses = isset($message->{$header}) ? rcube_mime::decode_address_list($message->{$header}) : array();
 
                     // Decode recipients and matching rules from retrieved addresses
                     foreach ($addresses as $address) {
@@ -128,7 +97,7 @@ class custom_from extends rcube_plugin
                 // Get user identities list
                 $identities = array();
 
-                foreach ($USER->list_identities() as $identity) {
+                foreach ($rcmail->user->list_identities() as $identity) {
                     $identities[$identity['email']] = array(
                         'domain' => preg_replace('/^[^@]*@(.*)$/', '$1', $identity['email']),
                         'name' => $identity['name']
