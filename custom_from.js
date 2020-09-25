@@ -6,14 +6,14 @@
 if (window.rcmail) {
 	var customFromToggle = (function () {
 		// UI elements
-		var iconDisable = 'plugins/custom_from/images/custom_from_off.png';
-		var iconEnable = 'plugins/custom_from/images/custom_from_on.png';
-		var textDisable = rcmail.gettext('custom_from_button_off', 'custom_from');
-		var textEnable = rcmail.gettext('custom_from_button_on', 'custom_from');
+		var textDisable = rcmail.gettext('custom_from_off', 'custom_from');
+		var textDisableHint = rcmail.gettext('custom_from_off_hint', 'custom_from');
+		var textEnable = rcmail.gettext('custom_from_on', 'custom_from');
+		var textEnableHint = rcmail.gettext('custom_from_on_hint', 'custom_from');
 
-		var button = $('<a class="input-group-text" href="#">')
-			.attr('title', textEnable)
-			.html($('<img alt="Custom From Toggle">').attr('src', iconEnable));
+		var button = $('<a class="custom-from-off iconlink input-group-text" href="#">')
+			.attr('title', textEnableHint)
+			.text(textEnable);
 
 		// Plugin state
 		var disabled = true;
@@ -28,8 +28,10 @@ if (window.rcmail) {
 
 			if (disabled) {
 				button
-					.attr('title', textDisable)
-					.find('img').attr('src', iconDisable);
+					.addClass('custom-from-off')
+					.removeClass('custom-from-on')
+					.attr('title', textDisableHint)
+					.text(textDisable);
 
 				senderTextbox = $('<input class="custom_from form-control" name="_from" type="text">')
 					.attr('onchange', senderSelect.attr('onchange'))
@@ -39,26 +41,18 @@ if (window.rcmail) {
 					.before(senderTextbox)
 					.removeAttr('name')
 					.css('display', 'none');
-
-				// Fix for Classic skin only
-				// See: https://github.com/r3c/custom_from/issues/18
-				$('#compose-div')
-					.css('top', '+=18');
-			}
-			else {
+			} else {
 				button
-					.attr('title', textEnable)
-					.find('img').attr('src', iconEnable);
+					.addClass('custom-from-on')
+					.removeClass('custom-from-off')
+					.attr('title', textEnableHint)
+					.text(textEnable);
 
 				senderTextbox.remove();
 
 				senderSelect
 					.attr('name', '_from')
 					.css('display', 'inline');
-
-				// Cancel fix for Classic skin only (see above)
-				$('#compose-div')
-					.css('top', '-=18');
 			}
 
 			disabled = !disabled;

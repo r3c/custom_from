@@ -1,0 +1,17 @@
+#composeheaders .editfield .custom-from-off,
+#composeheaders .editfield .custom-from-on {
+    background-position: 0 0;
+}
+
+#composeheaders .editfield .custom-from-off {
+    background-image: url('../../images/custom_from_off.png');
+}
+
+#composeheaders .editfield .custom-from-on {
+    background-image: url('../../images/custom_from_on.png');
+}
+
+#composeheaders input.custom_from {
+    min-width: 300px;
+    width: auto;
+}

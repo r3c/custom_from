@@ -185,6 +185,7 @@ class custom_from extends rcube_plugin
             }
 
             $this->include_script('custom_from.js');
+            $this->include_stylesheet($this->local_skin_path() . '/custom_from.css');
         }
 
         return $params;

@@ -1,0 +1,15 @@
+#compose_from .custom-from-off,
+#compose_from .custom-from-on {
+    background-position: 8px 8px;
+    background-repeat: no-repeat;
+    padding: 0 16px;
+    text-indent: -9999px;
+}
+
+#compose_from .custom-from-off {
+    background-image: url('../../images/custom_from_off.png');
+}
+
+#compose_from .custom-from-on {
+    background-image: url('../../images/custom_from_on.png');
+}
