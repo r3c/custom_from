@@ -153,8 +153,15 @@ class custom_from extends rcube_plugin
     {
         global $COMPOSE;
 
-        $address = $this->get_state($COMPOSE['id']);
         $message = $params['message'];
+
+        // Parameter 'message' may be null, exit to avoid raising errors
+        // See: https://github.com/r3c/custom_from/issues/22
+        if ($message === null) {
+            return;
+        }
+
+        $address = $this->get_state($COMPOSE['id']);
         $rcmail = rcmail::get_instance();
         $rules = $this->get_rules($rcmail->config);
 
