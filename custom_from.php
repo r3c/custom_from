@@ -152,16 +152,21 @@ class custom_from extends rcube_plugin
     public function message_compose_body($params)
     {
         global $COMPOSE;
+        global $MESSAGE;
 
-        $message = $params['message'];
+        // Log error and exit in case required globals are undefined to avoid unwanted behavior
+        if ($COMPOSE === null || $MESSAGE === null) {
+            rcube::raise_error(array(
+                'code' => 500, 'type' => 'php',
+                'file' => __FILE__, 'line' => __LINE__,
+                'message' => '$COMPOSE or $MESSAGE global variable is undefined, custom_from can\'t work properly'
+            ), true, false);
 
-        // Parameter 'message' may be null, exit to avoid raising errors
-        // See: https://github.com/r3c/custom_from/issues/22
-        if ($message === null) {
             return;
         }
 
         $address = $this->get_state($COMPOSE['id']);
+        $message = $MESSAGE;
         $rcmail = rcmail::get_instance();
         $rules = $this->get_rules($rcmail->config);
 
