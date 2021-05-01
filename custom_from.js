@@ -11,7 +11,7 @@ if (window.rcmail) {
 		var textEnable = rcmail.gettext('custom_from_on', 'custom_from');
 		var textEnableHint = rcmail.gettext('custom_from_on_hint', 'custom_from');
 
-		var button = $('<a class="custom-from-off iconlink input-group-text" href="#">')
+		var button = $('<a class="custom-from-on iconlink input-group-text" href="#">')
 			.attr('title', textEnableHint)
 			.text(textEnable);
 
