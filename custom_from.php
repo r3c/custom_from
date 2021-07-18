@@ -151,37 +151,40 @@ class custom_from extends rcube_plugin
      */
     public function message_compose_body($params)
     {
-        global $COMPOSE;
         global $MESSAGE;
 
-        // Log error and exit in case required globals are undefined to avoid unwanted behavior
-        if ($COMPOSE === null || $MESSAGE === null) {
+        $compose_id = rcube_utils::get_input_value('_id', rcube_utils::INPUT_GET);
+        $address = $this->get_state($compose_id);
+        $message = isset($params['message']) ? $params['message'] : (isset($MESSAGE) ? $MESSAGE : null);
+
+        // Log error and exit in case required state variables are undefined to avoid unwanted behavior
+        if ($address === null || $message === null) {
             rcube::raise_error(array(
                 'code' => 500, 'type' => 'php',
                 'file' => __FILE__, 'line' => __LINE__,
-                'message' => '$COMPOSE or $MESSAGE global variable is undefined, custom_from can\'t work properly'
+                'message' => 'missing state variable, custom_from can\'t work properly'
             ), true, false);
 
             return;
         }
 
-        $address = $this->get_state($COMPOSE['id']);
-        $message = $MESSAGE;
         $rcmail = rcmail::get_instance();
         $rules = $this->get_rules($rcmail->config);
 
         foreach (array_keys($rules) as $header) {
-            $addresses_header = rcube_mime::decode_address_list($message->headers->{$header});
+            if (isset($message->headers->{$header})) {
+                $addresses_header = rcube_mime::decode_address_list($message->headers->{$header});
 
-            $addresses_filtered = array_filter($addresses_header, function ($test) use ($address) {
-                return $test['mailto'] !== $address;
-            });
+                $addresses_filtered = array_filter($addresses_header, function ($test) use ($address) {
+                    return $test['mailto'] !== $address;
+                });
 
-            $addresses_string = array_map(function ($address) {
-                return $address['string'];
-            }, $addresses_filtered);
+                $addresses_string = array_map(function ($address) {
+                    return $address['string'];
+                }, $addresses_filtered);
 
-            $message->headers->{$header} = implode(', ', $addresses_string);
+                $message->headers->{$header} = implode(', ', $addresses_string);
+            }
         }
     }
 
