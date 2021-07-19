@@ -35,7 +35,7 @@ class custom_from extends rcube_plugin
         $this->load_config();
 
         $rcmail = rcmail::get_instance();
-        $rules = $this->get_rules($rcmail->config);
+        $rules = self::get_rules($rcmail->config);
 
         foreach (array_keys($rules) as $header) {
             $params['fetch_headers'] = (isset($params['fetch_headers']) && $params['fetch_headers'] !== '' ? $params['fetch_headers'] . ' ' : '') . $header;
@@ -73,7 +73,7 @@ class custom_from extends rcube_plugin
             if ($message !== null) {
                 // Browse headers where addresses will be fetched from
                 $recipients = array();
-                $rules = $this->get_rules($rcmail->config);
+                $rules = self::get_rules($rcmail->config);
 
                 foreach ($rules as $header => $rule) {
                     $addresses = isset($message->{$header}) ? rcube_mime::decode_address_list($message->{$header}) : array();
@@ -137,7 +137,7 @@ class custom_from extends rcube_plugin
             }
         }
 
-        $this->set_state($compose_id, $address);
+        self::set_state($compose_id, $address);
     }
 
     /**
@@ -154,22 +154,23 @@ class custom_from extends rcube_plugin
         global $MESSAGE;
 
         $compose_id = rcube_utils::get_input_value('_id', rcube_utils::INPUT_GET);
-        $address = $this->get_state($compose_id);
         $message = isset($params['message']) ? $params['message'] : (isset($MESSAGE) ? $MESSAGE : null);
 
         // Log error and exit in case required state variables are undefined to avoid unwanted behavior
-        if ($address === null || $message === null) {
-            rcube::raise_error(array(
-                'code' => 500, 'type' => 'php',
-                'file' => __FILE__, 'line' => __LINE__,
-                'message' => 'missing state variable, custom_from can\'t work properly'
-            ), true, false);
+        if ($compose_id === null) {
+            self::emit_error('missing \'_id\' GET parameter, custom_from won\'t work properly');
+
+            return;
+        } else if ($message === null) {
+            self::emit_error('missing $message hook parameter and global variable, custom_from won\'t work properly');
 
             return;
         }
 
+        $address = self::get_state($compose_id);
+
         $rcmail = rcmail::get_instance();
-        $rules = $this->get_rules($rcmail->config);
+        $rules = self::get_rules($rcmail->config);
 
         foreach (array_keys($rules) as $header) {
             if (isset($message->headers->{$header})) {
@@ -192,7 +193,7 @@ class custom_from extends rcube_plugin
     {
         if ($params['template'] === 'compose') {
             $compose_id = rcube_utils::get_input_value('_id', rcube_utils::INPUT_GET);
-            $address = $this->get_state($compose_id);
+            $address = self::get_state($compose_id);
 
             if ($address !== null) {
                 $rcmail = rcmail::get_instance();
@@ -206,7 +207,12 @@ class custom_from extends rcube_plugin
         return $params;
     }
 
-    private function get_rules($config)
+    private static function emit_error($message)
+    {
+        rcube::raise_error(array('code' => 500, 'type' => 'php', 'file' => __FILE__, 'line' => __LINE__, 'message' => $message), true, false);
+    }
+
+    private static function get_rules($config)
     {
         $headers = array();
         $value = $config->get('custom_from_header_rules', self::DEFAULT_HEADER_RULES);
@@ -222,12 +228,12 @@ class custom_from extends rcube_plugin
         return $headers;
     }
 
-    private function get_state($compose_id)
+    private static function get_state($compose_id)
     {
         return $compose_id !== null && isset($_SESSION['custom_from_' . $compose_id]) ? $_SESSION['custom_from_' . $compose_id] : null;
     }
 
-    private function set_state($compose_id, $value)
+    private static function set_state($compose_id, $value)
     {
         $_SESSION['custom_from_' . $compose_id] = $value;
     }
