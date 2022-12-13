@@ -1,5 +1,7 @@
 <?php
 
+$config = array();
+
 /*
 ** Plugin will try to guess when a custom e-mail address should be used when
 ** composing an e-mail if this option is set to "true". If you have too many
@@ -7,7 +9,7 @@
 ** fine-tune this behavior by changing value of the "custom_from_header_rules"
 ** option.
 */
-//$rcmail_config['custom_from_compose_auto'] = true;
+//$config['custom_from_compose_auto'] = true;
 
 /*
 ** List of allowed matching rules by header type. This define how addresses
@@ -27,4 +29,4 @@
 ** known to contain e-mail addresses, except for the "X-Original-To" header
 ** where all rules are enabled.
 */
-//$rcmail_config['custom_from_header_rules'] = 'X-Original-To=deo;To=de;Cc=de;Cci=de;From=de';
+//$config['custom_from_header_rules'] = 'X-Original-To=deo;To=de;Cc=de;Cci=de;From=de';
