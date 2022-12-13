@@ -76,7 +76,7 @@ class custom_from extends rcube_plugin
                 $rules = self::get_rules($rcmail->config);
 
                 foreach ($rules as $header => $rule) {
-                    $addresses = isset($message->{$header}) ? rcube_mime::decode_address_list($message->{$header}) : array();
+                    $addresses = isset($message->{$header}) ? rcube_mime::decode_address_list($message->{$header}, null, false) : array();
 
                     // Decode recipients and matching rules from retrieved addresses
                     foreach ($addresses as $address) {
@@ -174,7 +174,7 @@ class custom_from extends rcube_plugin
 
         foreach (array_keys($rules) as $header) {
             if (isset($message->headers->{$header})) {
-                $addresses_header = rcube_mime::decode_address_list($message->headers->{$header});
+                $addresses_header = rcube_mime::decode_address_list($message->headers->{$header}, null, false);
 
                 $addresses_filtered = array_filter($addresses_header, function ($test) use ($address) {
                     return $test['mailto'] !== $address;
