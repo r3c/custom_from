@@ -14,6 +14,19 @@
 class custom_from extends rcube_plugin
 {
     const DEFAULT_HEADER_RULES = 'X-Original-To=deo;To=de;Cc=de;Cci=de;From=de';
+    const REPLY_FROM_SETTING = '_custom_from_reply_from';
+
+    /** Plugin options */
+    const RECEIVING_EMAIL_OPTION = 'reply_from_receiving_email';
+    const RECEIVING_EMAIL_WITH_IDENTITY_OPTION = 'reply_from_receiving_email_with_identity';
+    const RECEIVING_EMAIL_WITH_DEFAULT_IDENTITY_OPTION = 'reply_from_receiving_email_with_default_identity';
+    const DEFAULT_IDENTITY_OPTION = 'reply_from_default_identity';
+
+    /** Plugin states */
+    private static $is_reply = false;
+    private static $is_draft = false;
+    private static $is_identity = false;
+
 
     /**
      ** Initialize plugin.
@@ -21,56 +34,157 @@ class custom_from extends rcube_plugin
     public function init()
     {
         $this->add_texts('localization', true);
-        $this->add_hook('message_compose', array($this, 'message_compose'));
         $this->add_hook('message_compose_body', array($this, 'message_compose_body'));
         $this->add_hook('render_page', array($this, 'render_page'));
         $this->add_hook('storage_init', array($this, 'storage_init'));
+        $this->add_hook('preferences_sections_list', array($this, 'preferences_sections_list'));
+        $this->add_hook('preferences_list', array($this, 'preferences_list'));
+        $this->add_hook('preferences_save', array($this, 'preferences_save'));
+        $this->add_hook('template_object_composeheaders', array($this, 'template_object_composeheaders'));
+        $this->add_hook('template_object_composebody', array($this, 'template_object_composebody'));
     }
 
     /**
-     ** Adds additional headers to supported headers list.
+     ** Override form fields
      */
-    public function storage_init($params)
+    public function template_object_composeheaders($attrib)
     {
         $this->load_config();
 
         $rcmail = rcmail::get_instance();
-        $rules = self::get_rules($rcmail->config);
+        $compose_id = rcube_utils::get_input_value('_id', rcube_utils::INPUT_GET);
+        $compose_data = $_SESSION['compose_data_' . $compose_id] ?? array();
+        $msg_uid = '';
 
-        foreach (array_keys($rules) as $header) {
-            $params['fetch_headers'] = (isset($params['fetch_headers']) && $params['fetch_headers'] !== '' ? $params['fetch_headers'] . ' ' : '') . $header;
+        if (isset($compose_data['param']['reply_uid'])) {
+            $msg_uid = $compose_data['param']['reply_uid'];
+            self::$is_reply = true;
+        } elseif (isset($compose_data['param']['draft_uid'])) {
+            $msg_uid = $compose_data['param']['draft_uid'];
+            self::$is_draft = true;
+        } elseif (isset($compose_data['param']['forward_uid'])) {
+            $msg_uid = $compose_data['param']['forward_uid'];
+        } elseif (isset($compose_data['param']['uid'])) {
+            $msg_uid = $compose_data['param']['uid'];
         }
 
-        return $params;
+        if (!$rcmail->config->get('custom_from_compose_auto', true) || !$msg_uid) {
+            return $attrib;
+        }
+
+        $reply_from = rcmail::get_instance()->user->prefs[self::REPLY_FROM_SETTING] ?? self::RECEIVING_EMAIL_WITH_IDENTITY_OPTION;
+
+        switch ($attrib['part']) {
+            case 'from':
+                if (self::$is_draft) {
+                    $attrib = $this->compose_draft_from_headers($compose_id, $msg_uid, $reply_from, $attrib);
+                } else {
+                    $attrib = $this->compose_from_headers($compose_id, $msg_uid, $reply_from, $attrib);
+                }
+                break;
+            case 'replyto':
+            case 'bcc':
+                if (!self::$is_draft) {
+                    $attrib = $this->compose_additional_headers($compose_id, $msg_uid, $reply_from, $attrib);
+                }
+            default:
+                break;
+        }
+
+        return $attrib;
+    }
+
+    /**
+     * Remove signature from email body when replying to a receiving email.
+     */
+    public function template_object_composebody($attrib)
+    {
+        if (!self::$is_reply) {
+            return $attrib;
+        }
+
+        $reply_from = rcmail::get_instance()->user->prefs[self::REPLY_FROM_SETTING] ?? self::RECEIVING_EMAIL_WITH_IDENTITY_OPTION;
+        $rcmail = rcmail::get_instance();
+
+        switch ($reply_from) {
+            case self::RECEIVING_EMAIL_OPTION:
+                $rcmail->output->set_env('signatures', array());
+                break;
+            case self::RECEIVING_EMAIL_WITH_IDENTITY_OPTION:
+                if (!self::$is_identity) {
+                    $rcmail->output->set_env('signatures', array());
+                }
+
+                break;
+            case self::RECEIVING_EMAIL_WITH_DEFAULT_IDENTITY_OPTION:
+                $default_identity = $rcmail->user->get_identity();
+                $default_identity_id = $default_identity['identity_id'];
+                $signatures = $rcmail->output->get_env('signatures');
+                $default_signature = $signatures[$default_identity_id] ?? array();
+                $replaced = array_fill_keys(array_keys($signatures), $default_signature);
+
+                if ($default_signature) {
+                    foreach ($rcmail->user->list_identities() as $identity) {
+                        $replaced[$identity['identity_id']] = $default_signature;
+                    }
+                }
+
+                $rcmail->output->set_env('identity', $default_identity);
+                $rcmail->output->set_env('signatures', $replaced);
+                break;
+            default:
+                break;
+        }
+
+        return $attrib;
+    }
+
+
+    /**
+     ** Enable custom "From:" field for drafts.
+     */
+    public function compose_draft_from_headers($compose_id, $msg_uid, $reply_from, $attrib)
+    {
+        $rcmail = rcmail::get_instance();
+        $message = $rcmail->get_storage()->get_message($msg_uid);
+        $from = '';
+        $identities_emails = array();
+
+        foreach ($rcmail->user->list_identities() as $identity) {
+            $identities_emails[] = $identity['email'];
+        }
+
+        if ($message->from) {
+            $mail_from_address = array_first(rcube_mime::decode_address_list($message->from, null, true, $message->charset));
+            $from_email = $mail_from_address['mailto'];
+            $from_name = !empty($mail_from_address['name']) ? $mail_from_address['name'] : '';
+
+            if (!in_array($from_email, $identities_emails) || $reply_from === self::RECEIVING_EMAIL_WITH_IDENTITY_OPTION) {
+                $from = format_email_recipient($from_email, $from_name);
+            }
+        }
+
+        if ($from) {
+            self::set_state($compose_id, $from);
+        }
+
+        return $attrib;
     }
 
     /**
      ** Enable custom "From:" field if mail being composed has been sent to an
      ** address that looks like virtual (i.e. not in user identities list).
      */
-    public function message_compose($params)
+    public function compose_from_headers($compose_id, $msg_uid, $reply_from, $attrib)
     {
-        $this->load_config();
-
-        $address = null;
-        $compose_id = $params['id'];
         $rcmail = rcmail::get_instance();
+        $message = $rcmail->get_storage()->get_message_headers($msg_uid, null, true);
+        $address = null;
 
-        if (isset($params['param']['reply_uid'])) {
-            $message_uid = $params['param']['reply_uid'];
-        } elseif (isset($params['param']['forward_uid'])) {
-            $message_uid = $params['param']['forward_uid'];
-        } elseif (isset($params['param']['uid'])) {
-            $message_uid = $params['param']['uid'];
-        } else {
-            $message_uid = null;
-        }
-
-        if ($rcmail->config->get('custom_from_compose_auto', true) && $message_uid !== null) {
-            $storage = $rcmail->get_storage();
-            $message = $storage->get_message($message_uid);
-
-            if ($message !== null) {
+        switch ($reply_from) {
+            case self::RECEIVING_EMAIL_OPTION:
+            case self::RECEIVING_EMAIL_WITH_IDENTITY_OPTION:
+            case self::RECEIVING_EMAIL_WITH_DEFAULT_IDENTITY_OPTION:
                 // Browse headers where addresses will be fetched from
                 $recipients = array();
                 $rules = self::get_rules($rcmail->config);
@@ -109,13 +223,25 @@ class custom_from extends rcube_plugin
                 $address = null;
                 $score = 0;
 
+                $should_override_identity = in_array($reply_from, array(
+                    self::RECEIVING_EMAIL_OPTION,
+                    self::RECEIVING_EMAIL_WITH_DEFAULT_IDENTITY_OPTION
+                ));
+
                 foreach ($recipients as $recipient) {
                     $email = $recipient['email'];
 
                     // Relevance score 3: exact match found in identities
                     if ($score < 3 && $recipient['match_exact'] && isset($identities[$email])) {
-                        $address = null;
                         $score = 3;
+
+                        self::$is_identity = true;
+
+                        if ($should_override_identity && $reply_from == self::RECEIVING_EMAIL_WITH_DEFAULT_IDENTITY_OPTION) {
+                            $address = format_email_recipient($email, rcmail::get_instance()->user->get_identity()['name']);
+                        } else if ($should_override_identity) {
+                            $address = format_email_recipient($email);
+                        }
                     }
 
                     // Relevance score 2: domain match found in identities
@@ -134,10 +260,97 @@ class custom_from extends rcube_plugin
                         $score = 1;
                     }
                 }
-            }
+
+                if ($score > 2 && !$should_override_identity) {
+                    break;
+                }
+
+                /** Remove autocomplete by JS frontend after page loaded */
+                $rcmail->output->set_env('identities', array());
+
+                break;
+            case self::DEFAULT_IDENTITY_OPTION:
+                $default_identity = $rcmail->user->get_identity();
+                $field_attrib = ['name' => '_from'];
+
+                foreach ($attrib as $attr => $value) {
+                    if (in_array($attr, ['id', 'class', 'style', 'size', 'tabindex'])) {
+                        $field_attrib[$attr] = $value;
+                    }
+                }
+
+                $field_attrib['onchange'] = rcmail_output::JS_OBJECT_NAME . ".change_identity(this)";
+                $select_from = new html_select($field_attrib);
+
+                $select_from->add(format_email_recipient($default_identity['email'], $default_identity['name']), $default_identity['identity_id']);
+
+                $attrib['content'] = $select_from->show($default_identity['identity_id']);;
         }
 
         self::set_state($compose_id, $address);
+
+        return $attrib;
+    }
+
+    /**
+     * Override headers fields from identity (bcc, reply-to), by plugin settings
+     */
+    public function compose_additional_headers($compose_id, $msg_uid, $reply_from, $attrib)
+    {
+        if (!self::get_state($compose_id) && $reply_from !== self::RECEIVING_EMAIL_WITH_DEFAULT_IDENTITY_OPTION) {
+            return $attrib;
+        }
+
+        $part = strtolower($attrib['part']);
+        $value = '';
+
+        switch ($reply_from) {
+            case self::RECEIVING_EMAIL_WITH_DEFAULT_IDENTITY_OPTION:
+                $default_identity = rcmail::get_instance()->user->get_identity();
+                $value = $default_identity[$part] ?? '';
+                $field_attrib = array();
+
+                if (!$value && $part == 'replyto') {
+                    $value = $default_identity['reply-to'] ?? '';
+                }
+            case self::RECEIVING_EMAIL_OPTION:
+                $fname  = '_' . $part;
+                $allow_attrib = ['id', 'class', 'style', 'cols', 'rows', 'tabindex', 'data-recipient-input'];
+
+                foreach ($allow_attrib as $attr) {
+                    if (isset($attrib[$attr])) {
+                        $field_attrib[$attr] = $attrib[$attr];
+                    }
+                }
+
+                // Create a textarea field for overriding Roundcube input fields
+                $field = new html_textarea();
+
+                $attrib['content'] = $field->show($value, ['name' => $fname] + $field_attrib);
+                break;
+            default:
+                break;
+        }
+
+        return $attrib;
+    }
+
+
+    /**
+     ** Adds additional headers to supported headers list.
+     */
+    public function storage_init($params)
+    {
+        $this->load_config();
+
+        $rcmail = rcmail::get_instance();
+        $rules = self::get_rules($rcmail->config);
+
+        foreach (array_keys($rules) as $header) {
+            $params['fetch_headers'] = (isset($params['fetch_headers']) && $params['fetch_headers'] !== '' ? $params['fetch_headers'] . ' ' : '') . $header;
+        }
+
+        return $params;
     }
 
     /**
@@ -171,21 +384,29 @@ class custom_from extends rcube_plugin
 
         $rcmail = rcmail::get_instance();
         $rules = self::get_rules($rcmail->config);
+        $is_draft = isset($compose_data['param']['draft_uid']);
 
         foreach (array_keys($rules) as $header) {
-            if (isset($message->headers->{$header})) {
-                $addresses_header = rcube_mime::decode_address_list($message->headers->{$header}, null, false);
-
-                $addresses_filtered = array_filter($addresses_header, function ($test) use ($address) {
-                    return $test['mailto'] !== $address;
-                });
-
-                $addresses_string = array_map(function ($address) {
-                    return $address['string'];
-                }, $addresses_filtered);
-
-                $message->headers->{$header} = implode(', ', $addresses_string);
+            // Skip "To:" header for drafts
+            if ($is_draft && $header === 'to') {
+                continue;
             }
+
+            if (!isset($message->headers->{$header})) {
+                continue;
+            }
+
+            $addresses_header = rcube_mime::decode_address_list($message->headers->{$header}, null, false);
+
+            $addresses_filtered = array_filter($addresses_header, function ($test) use ($address) {
+                return $test['mailto'] !== $address;
+            });
+
+            $addresses_string = array_map(function ($address) {
+                return $address['string'];
+            }, $addresses_filtered);
+
+            $message->headers->{$header} = implode(', ', $addresses_string);
         }
     }
 
@@ -205,6 +426,80 @@ class custom_from extends rcube_plugin
         }
 
         return $params;
+    }
+
+    /**
+     ** Add a plugin section to a settings list
+     */
+    public function preferences_sections_list($params)
+    {
+        $section_name = rcmail::get_instance()->gettext('reply_settings_title', 'custom_from');
+        $params['list']['custom_from'] = ['id' => 'custom_from', 'section' => $section_name];
+
+        $this->include_stylesheet($this->local_skin_path() . '/custom_from.css');
+
+        return $params;
+    }
+
+    /**
+     ** Add a plugin options to a settings list
+     */
+    public function preferences_list($params)
+    {
+        if ($params['section'] !== 'custom_from') {
+            return $params;
+        }
+
+        $rcmail = rcmail::get_instance();
+
+        $options = array(
+            self::RECEIVING_EMAIL_OPTION,
+            self::RECEIVING_EMAIL_WITH_IDENTITY_OPTION,
+            self::RECEIVING_EMAIL_WITH_DEFAULT_IDENTITY_OPTION,
+            self::DEFAULT_IDENTITY_OPTION
+        );
+
+        $reply_from = $rcmail->user->prefs[self::REPLY_FROM_SETTING] ?? '';
+
+        if (!$reply_from || !in_array($reply_from, $options)) {
+            $reply_from = $options[0];
+        }
+
+        $select = new html_select([
+            'name' => self::REPLY_FROM_SETTING,
+            'value' => 1,
+        ]);
+
+        $select->add(array(
+            $rcmail->gettext(self::RECEIVING_EMAIL_OPTION, 'custom_from'),
+            $rcmail->gettext(self::RECEIVING_EMAIL_WITH_IDENTITY_OPTION, 'custom_from'),
+            $rcmail->gettext(self::RECEIVING_EMAIL_WITH_DEFAULT_IDENTITY_OPTION, 'custom_from'),
+            $rcmail->gettext(self::DEFAULT_IDENTITY_OPTION, 'custom_from')
+        ), $options);
+
+        $params['blocks']['custom_from'] = [
+            'name' => $rcmail->gettext('custom_from_session_section_title', 'custom_from'),
+            'options' => [
+                [
+                    'title' => $rcmail->gettext('reply_from_setting_label', 'custom_from'),
+                    'content' => $select->show([$reply_from])
+                ],
+            ]
+        ];
+
+        return $params;
+    }
+
+    /**
+     ** Save plugin preferences.
+     */
+    public function preferences_save($args)
+    {
+        if ($args['section'] === 'custom_from') {
+            $args['prefs'][self::REPLY_FROM_SETTING] = rcube_utils::get_input_value(self::REPLY_FROM_SETTING, rcube_utils::INPUT_POST);
+        }
+
+        return $args;
     }
 
     private static function emit_error($message)

@@ -42,12 +42,29 @@ Usage
 -----
 
 Once plugin is installed, custom sender button will appear at the right
-hand side of the identity selection list.
+hand side of the identity selection list, with icon ![Custom-From icon](images/custom_from_on.png).
 
-If you want to disable the "automatic replacement on reply" feature, rename
+![Reply Fields](screenshots/reply_fields.jpg)
+
+If you want to disable the "automatic replacement on reply" feature, for all users, rename
 `config.inc.php.dist` file into `config.inc.php`, uncomment the line with a
 parameter named `custom_from_compose_auto` and set this value to `false`.
 
+User preferences
+-----
+
+On the settings page, in the Preferences menu, Reply settings section,
+you can see plugin settings individually for each user,
+you can configure various options for Reply:
+
+- **Receiving email address** — replies from the receiving email address without adding parameters.
+- **Receiving email address with matching identity** — replies from the receiving email address adding parameters (Bcc, Reply-To) of a matching identity.
+- **Receiving email address with default identity** — replies from the receiving email address adding parameters (Bcc, Reply-To) of the default identity.
+- **Default identity** — replies from the default identity.
+
+![Reply settings screenshot](screenshots/settings.jpg)
+
+By default, the **Receiving email address with matching identity** option is set
 
 Thanks
 ------
