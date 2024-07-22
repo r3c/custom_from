@@ -68,7 +68,7 @@ class custom_from extends rcube_plugin
             $msg_uid = $compose_data['param']['uid'];
         }
 
-        if (!$rcmail->config->get('custom_from_compose_auto', true) || !$msg_uid) {
+        if (!$rcmail->config->get('custom_from_compose_auto', true) || $msg_uid === '') {
             return $attrib;
         }
 
@@ -123,7 +123,7 @@ class custom_from extends rcube_plugin
                 $default_signature = $signatures[$default_identity_id] ?? array();
                 $replaced = array_fill_keys(array_keys($signatures), $default_signature);
 
-                if ($default_signature) {
+                if (count($default_signature) > 0) {
                     foreach ($rcmail->user->list_identities() as $identity) {
                         $replaced[$identity['identity_id']] = $default_signature;
                     }
