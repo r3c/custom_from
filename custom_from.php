@@ -68,7 +68,7 @@ class custom_from extends rcube_plugin
             $msg_uid = $compose_data['param']['uid'];
         }
 
-        if (!$rcmail->config->get('custom_from_compose_auto', true) || !$msg_uid) {
+        if (!$rcmail->config->get('custom_from_compose_auto', true) || $msg_uid === '') {
             return $attrib;
         }
 
