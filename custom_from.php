@@ -464,7 +464,7 @@ class custom_from extends rcube_plugin
             self::DEFAULT_IDENTITY_OPTION
         );
 
-        $reply_from = $rcmail->user->prefs[self::REPLY_FROM_SETTING] ?? '';
+        $reply_from = $rcmail->user->prefs[self::REPLY_FROM_SETTING] ?? self::RECEIVING_EMAIL_WITH_IDENTITY_OPTION;
 
         if (!$reply_from || !in_array($reply_from, $options)) {
             $reply_from = $options[0];
@@ -472,6 +472,7 @@ class custom_from extends rcube_plugin
 
         $select = new html_select(array(
             'name' => self::REPLY_FROM_SETTING,
+            'id' => self::REPLY_FROM_SETTING,
             'value' => 1,
         ));
 
@@ -486,7 +487,7 @@ class custom_from extends rcube_plugin
             'name' => $rcmail->gettext('custom_from_session_section_title', 'custom_from'),
             'options' => array(
                 array(
-                    'title' => $rcmail->gettext('reply_from_setting_label', 'custom_from'),
+                    'title' => html::label(self::REPLY_FROM_SETTING, $rcmail->gettext('reply_from_setting_label', 'custom_from')),
                     'content' => $select->show(array($reply_from))
                 )
             )
