@@ -22,11 +22,13 @@ class custom_from extends rcube_plugin
     const RECEIVING_EMAIL_WITH_DEFAULT_IDENTITY_OPTION = 'reply_from_receiving_email_with_default_identity';
     const DEFAULT_IDENTITY_OPTION = 'reply_from_default_identity';
 
+    /** User preferences */
+    const PREFERENCE_SECTION = 'custom_from';
+
     /** Plugin states */
     private static $is_reply = false;
     private static $is_draft = false;
     private static $is_identity = false;
-
 
     /**
      ** Initialize plugin.
@@ -434,7 +436,10 @@ class custom_from extends rcube_plugin
     public function preferences_sections_list($params)
     {
         $section_name = rcmail::get_instance()->gettext('reply_settings_title', 'custom_from');
-        $params['list']['custom_from'] = ['id' => 'custom_from', 'section' => $section_name];
+        $params['list'][self::PREFERENCE_SECTION] = array(
+            'id' => self::PREFERENCE_SECTION,
+            'section' => $section_name
+        );
 
         $this->include_stylesheet($this->local_skin_path() . '/custom_from.css');
 
@@ -446,7 +451,7 @@ class custom_from extends rcube_plugin
      */
     public function preferences_list($params)
     {
-        if ($params['section'] !== 'custom_from') {
+        if ($params['section'] !== self::PREFERENCE_SECTION) {
             return $params;
         }
 
@@ -477,7 +482,7 @@ class custom_from extends rcube_plugin
             $rcmail->gettext(self::DEFAULT_IDENTITY_OPTION, 'custom_from')
         ), $options);
 
-        $params['blocks']['custom_from'] = [
+        $params['blocks'][self::PREFERENCE_SECTION] = [
             'name' => $rcmail->gettext('custom_from_session_section_title', 'custom_from'),
             'options' => [
                 [
@@ -495,7 +500,7 @@ class custom_from extends rcube_plugin
      */
     public function preferences_save($args)
     {
-        if ($args['section'] === 'custom_from') {
+        if ($args['section'] === self::PREFERENCE_SECTION) {
             $args['prefs'][self::REPLY_FROM_SETTING] = rcube_utils::get_input_value(self::REPLY_FROM_SETTING, rcube_utils::INPUT_POST);
         }
 
