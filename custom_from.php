@@ -276,17 +276,11 @@ class custom_from extends rcube_plugin
 
             case self::DEFAULT_IDENTITY_OPTION:
                 $default_identity = $rcmail->user->get_identity();
-                $field_attrib = array('name' => '_from');
-
-                foreach ($attrib as $attr => $value) {
-                    if (in_array($attr, array('id', 'class', 'style', 'size', 'tabindex'))) {
-                        $field_attrib[$attr] = $value;
-                    }
-                }
-
-                $field_attrib['onchange'] = rcmail_output::JS_OBJECT_NAME . ".change_identity(this)";
-                $select_from = new html_select($field_attrib);
-
+                $select_from_attrib = array_intersect_key($attrib, array_flip(array('id', 'class', 'style', 'size', 'tabindex'))) + array(
+                    'name' => '_from',
+                    'onchange' => rcmail_output::JS_OBJECT_NAME . ".change_identity(this)"
+                );
+                $select_from = new html_select($select_from_attrib);
                 $select_from->add(format_email_recipient($default_identity['email'], $default_identity['name']), $default_identity['identity_id']);
 
                 $attrib['content'] = $select_from->show($default_identity['identity_id']);
@@ -315,26 +309,20 @@ class custom_from extends rcube_plugin
             case self::RECEIVING_EMAIL_WITH_DEFAULT_IDENTITY_OPTION:
                 $default_identity = rcmail::get_instance()->user->get_identity();
                 $value = $default_identity[$part] ?? '';
-                $field_attrib = array();
 
                 if ($value === '' && $part == 'replyto') {
                     $value = $default_identity['reply-to'] ?? '';
                 }
 
             case self::RECEIVING_EMAIL_OPTION:
-                $fname  = '_' . $part;
-                $allow_attrib = array('id', 'class', 'style', 'cols', 'rows', 'tabindex', 'data-recipient-input');
-
-                foreach ($allow_attrib as $attr) {
-                    if (isset($attrib[$attr])) {
-                        $field_attrib[$attr] = $attrib[$attr];
-                    }
-                }
+                $field_attrib = array_intersect_key($attrib, array_flip(array('id', 'class', 'style', 'cols', 'rows', 'tabindex', 'data-recipient-input'))) + array(
+                    'name' => '_' . $part
+                );
 
                 // Create a textarea field for overriding Roundcube input fields
                 $field = new html_textarea();
 
-                $attrib['content'] = $field->show($value, array('name' => $fname) + $field_attrib);
+                $attrib['content'] = $field->show($value, $field_attrib);
 
                 break;
         }
