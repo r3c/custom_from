@@ -79,7 +79,7 @@ class custom_from extends rcube_plugin
         switch ($attrib['part']) {
             case 'from':
                 if (self::$is_draft) {
-                    $attrib = $this->compose_draft_from_headers($compose_id, $msg_uid, $reply_from, $attrib);
+                    $this->compose_draft_from_headers($compose_id, $msg_uid, $reply_from);
                 } else {
                     $attrib = $this->compose_from_headers($compose_id, $msg_uid, $reply_from, $attrib);
                 }
@@ -87,7 +87,7 @@ class custom_from extends rcube_plugin
             case 'replyto':
             case 'bcc':
                 if (!self::$is_draft) {
-                    $attrib = $this->compose_additional_headers($compose_id, $msg_uid, $reply_from, $attrib);
+                    $attrib = $this->compose_additional_headers($compose_id, $reply_from, $attrib);
                 }
             default:
                 break;
@@ -145,7 +145,7 @@ class custom_from extends rcube_plugin
     /**
      ** Enable custom "From:" field for drafts.
      */
-    public function compose_draft_from_headers($compose_id, $msg_uid, $reply_from, $attrib)
+    public function compose_draft_from_headers($compose_id, $msg_uid, $reply_from)
     {
         $rcmail = rcmail::get_instance();
         $message = $rcmail->get_storage()->get_message($msg_uid);
@@ -169,8 +169,6 @@ class custom_from extends rcube_plugin
         if ($from) {
             self::set_state($compose_id, $from);
         }
-
-        return $attrib;
     }
 
     /**
@@ -297,7 +295,7 @@ class custom_from extends rcube_plugin
     /**
      * Override headers fields from identity (bcc, reply-to), by plugin settings
      */
-    public function compose_additional_headers($compose_id, $msg_uid, $reply_from, $attrib)
+    public function compose_additional_headers($compose_id, $reply_from, $attrib)
     {
         if (!self::get_state($compose_id) && $reply_from !== self::RECEIVING_EMAIL_WITH_DEFAULT_IDENTITY_OPTION) {
             return $attrib;
