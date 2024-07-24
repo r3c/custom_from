@@ -83,13 +83,15 @@ class custom_from extends rcube_plugin
                 } else {
                     $attrib = $this->compose_from_headers($compose_id, $msg_uid, $reply_from, $attrib);
                 }
+
                 break;
+
             case 'replyto':
             case 'bcc':
                 if (!self::$is_draft) {
                     $attrib = $this->compose_additional_headers($compose_id, $reply_from, $attrib);
                 }
-            default:
+
                 break;
         }
 
@@ -111,13 +113,16 @@ class custom_from extends rcube_plugin
         switch ($reply_from) {
             case self::RECEIVING_EMAIL_OPTION:
                 $rcmail->output->set_env('signatures', array());
+
                 break;
+
             case self::RECEIVING_EMAIL_WITH_IDENTITY_OPTION:
                 if (!self::$is_identity) {
                     $rcmail->output->set_env('signatures', array());
                 }
 
                 break;
+
             case self::RECEIVING_EMAIL_WITH_DEFAULT_IDENTITY_OPTION:
                 $default_identity = $rcmail->user->get_identity();
                 $default_identity_id = $default_identity['identity_id'];
@@ -133,8 +138,7 @@ class custom_from extends rcube_plugin
 
                 $rcmail->output->set_env('identity', $default_identity);
                 $rcmail->output->set_env('signatures', $replaced);
-                break;
-            default:
+
                 break;
         }
 
@@ -269,6 +273,7 @@ class custom_from extends rcube_plugin
                 $rcmail->output->set_env('identities', array());
 
                 break;
+
             case self::DEFAULT_IDENTITY_OPTION:
                 $default_identity = $rcmail->user->get_identity();
                 $field_attrib = array('name' => '_from');
@@ -284,7 +289,9 @@ class custom_from extends rcube_plugin
 
                 $select_from->add(format_email_recipient($default_identity['email'], $default_identity['name']), $default_identity['identity_id']);
 
-                $attrib['content'] = $select_from->show($default_identity['identity_id']);;
+                $attrib['content'] = $select_from->show($default_identity['identity_id']);
+
+                break;
         }
 
         self::set_state($compose_id, $address);
@@ -310,9 +317,10 @@ class custom_from extends rcube_plugin
                 $value = $default_identity[$part] ?? '';
                 $field_attrib = array();
 
-                if (!$value && $part == 'replyto') {
+                if ($value === '' && $part == 'replyto') {
                     $value = $default_identity['reply-to'] ?? '';
                 }
+
             case self::RECEIVING_EMAIL_OPTION:
                 $fname  = '_' . $part;
                 $allow_attrib = array('id', 'class', 'style', 'cols', 'rows', 'tabindex', 'data-recipient-input');
@@ -327,8 +335,7 @@ class custom_from extends rcube_plugin
                 $field = new html_textarea();
 
                 $attrib['content'] = $field->show($value, array('name' => $fname) + $field_attrib);
-                break;
-            default:
+
                 break;
         }
 
@@ -464,7 +471,7 @@ class custom_from extends rcube_plugin
 
         $reply_from = $rcmail->user->prefs[self::REPLY_FROM_SETTING] ?? self::RECEIVING_EMAIL_WITH_IDENTITY_OPTION;
 
-        if (!$reply_from || !in_array($reply_from, $options)) {
+        if (!in_array($reply_from, $options)) {
             $reply_from = $options[0];
         }
 
