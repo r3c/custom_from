@@ -273,10 +273,10 @@ class custom_from extends rcube_plugin
                 break;
             case self::DEFAULT_IDENTITY_OPTION:
                 $default_identity = $rcmail->user->get_identity();
-                $field_attrib = ['name' => '_from'];
+                $field_attrib = array('name' => '_from');
 
                 foreach ($attrib as $attr => $value) {
-                    if (in_array($attr, ['id', 'class', 'style', 'size', 'tabindex'])) {
+                    if (in_array($attr, array('id', 'class', 'style', 'size', 'tabindex'))) {
                         $field_attrib[$attr] = $value;
                     }
                 }
@@ -317,7 +317,7 @@ class custom_from extends rcube_plugin
                 }
             case self::RECEIVING_EMAIL_OPTION:
                 $fname  = '_' . $part;
-                $allow_attrib = ['id', 'class', 'style', 'cols', 'rows', 'tabindex', 'data-recipient-input'];
+                $allow_attrib = array('id', 'class', 'style', 'cols', 'rows', 'tabindex', 'data-recipient-input');
 
                 foreach ($allow_attrib as $attr) {
                     if (isset($attrib[$attr])) {
@@ -328,7 +328,7 @@ class custom_from extends rcube_plugin
                 // Create a textarea field for overriding Roundcube input fields
                 $field = new html_textarea();
 
-                $attrib['content'] = $field->show($value, ['name' => $fname] + $field_attrib);
+                $attrib['content'] = $field->show($value, array('name' => $fname) + $field_attrib);
                 break;
             default:
                 break;
@@ -470,10 +470,10 @@ class custom_from extends rcube_plugin
             $reply_from = $options[0];
         }
 
-        $select = new html_select([
+        $select = new html_select(array(
             'name' => self::REPLY_FROM_SETTING,
             'value' => 1,
-        ]);
+        ));
 
         $select->add(array(
             $rcmail->gettext(self::RECEIVING_EMAIL_OPTION, 'custom_from'),
@@ -482,15 +482,15 @@ class custom_from extends rcube_plugin
             $rcmail->gettext(self::DEFAULT_IDENTITY_OPTION, 'custom_from')
         ), $options);
 
-        $params['blocks'][self::PREFERENCE_SECTION] = [
+        $params['blocks'][self::PREFERENCE_SECTION] = array(
             'name' => $rcmail->gettext('custom_from_session_section_title', 'custom_from'),
-            'options' => [
-                [
+            'options' => array(
+                array(
                     'title' => $rcmail->gettext('reply_from_setting_label', 'custom_from'),
-                    'content' => $select->show([$reply_from])
-                ],
-            ]
-        ];
+                    'content' => $select->show(array($reply_from))
+                )
+            )
+        );
 
         return $params;
     }
