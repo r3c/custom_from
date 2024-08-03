@@ -26,9 +26,9 @@ class custom_from extends rcube_plugin
     const PREFERENCE_SECTION = 'custom_from';
 
     /** Plugin states */
-    private static $is_reply = false;
     private static $is_draft = false;
     private static $is_identity = false;
+    private static $is_reply = false;
 
     /**
      ** Initialize plugin.
@@ -37,13 +37,13 @@ class custom_from extends rcube_plugin
     {
         $this->add_texts('localization', true);
         $this->add_hook('message_compose_body', array($this, 'message_compose_body'));
+        $this->add_hook('preferences_list', array($this, 'preferences_list'));
+        $this->add_hook('preferences_sections_list', array($this, 'preferences_sections_list'));
+        $this->add_hook('preferences_save', array($this, 'preferences_save'));
         $this->add_hook('render_page', array($this, 'render_page'));
         $this->add_hook('storage_init', array($this, 'storage_init'));
-        $this->add_hook('preferences_sections_list', array($this, 'preferences_sections_list'));
-        $this->add_hook('preferences_list', array($this, 'preferences_list'));
-        $this->add_hook('preferences_save', array($this, 'preferences_save'));
-        $this->add_hook('template_object_composeheaders', array($this, 'template_object_composeheaders'));
         $this->add_hook('template_object_composebody', array($this, 'template_object_composebody'));
+        $this->add_hook('template_object_composeheaders', array($this, 'template_object_composeheaders'));
     }
 
     /**
@@ -77,19 +77,19 @@ class custom_from extends rcube_plugin
         $reply_from = rcmail::get_instance()->user->prefs[self::REPLY_FROM_SETTING] ?? self::RECEIVING_EMAIL_WITH_IDENTITY_OPTION;
 
         switch ($attrib['part']) {
+            case 'bcc':
+            case 'replyto':
+                if (!self::$is_draft) {
+                    $attrib = $this->compose_additional_headers($compose_id, $reply_from, $attrib);
+                }
+
+                break;
+
             case 'from':
                 if (self::$is_draft) {
                     $this->compose_draft_from_headers($compose_id, $msg_uid, $reply_from);
                 } else {
                     $attrib = $this->compose_from_headers($compose_id, $msg_uid, $reply_from, $attrib);
-                }
-
-                break;
-
-            case 'replyto':
-            case 'bcc':
-                if (!self::$is_draft) {
-                    $attrib = $this->compose_additional_headers($compose_id, $reply_from, $attrib);
                 }
 
                 break;
