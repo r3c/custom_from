@@ -85,12 +85,17 @@ class custom_from extends rcube_plugin
                 }
 
                 break;
-
             case 'replyto':
             case 'bcc':
-                if (!self::$is_draft) {
-                    $attrib = $this->compose_additional_headers($compose_id, $reply_from, $attrib);
+                if (self::$is_draft) {
+                    break;
                 }
+
+                if (!self::get_state($compose_id) && $reply_from !== self::RECEIVING_EMAIL_WITH_DEFAULT_IDENTITY_OPTION) {
+                    break;
+                }
+
+                $attrib = $this->override_bcc_or_reply_to_fields($reply_from, $attrib);
 
                 break;
         }
@@ -294,14 +299,14 @@ class custom_from extends rcube_plugin
     }
 
     /**
-     * Override headers fields from identity (bcc, reply-to), by plugin settings
+     * Override headers fields from identity (bcc, reply-to), by plugin settings.
+     * $attrib needs all because we reading all attributes for HTML field.
+     * @param string $reply_from
+     * @param array $attrib
+     * @return array
      */
-    public function compose_additional_headers($compose_id, $reply_from, $attrib)
+    public function override_bcc_or_reply_to_fields($reply_from, $attrib)
     {
-        if (!self::get_state($compose_id) && $reply_from !== self::RECEIVING_EMAIL_WITH_DEFAULT_IDENTITY_OPTION) {
-            return $attrib;
-        }
-
         $part = strtolower($attrib['part']);
         $value = '';
 
@@ -314,6 +319,10 @@ class custom_from extends rcube_plugin
                     $value = $default_identity['reply-to'] ?? '';
                 }
 
+                /**
+                 * The break statement is unnecessary because we are changing the value
+                 * of the overridden field to avoid duplication.
+                 */
             case self::RECEIVING_EMAIL_OPTION:
                 $field_attrib = array_intersect_key($attrib, array_flip(array('id', 'class', 'style', 'cols', 'rows', 'tabindex', 'data-recipient-input'))) + array(
                     'name' => '_' . $part
