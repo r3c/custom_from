@@ -55,6 +55,9 @@ if (window.rcmail) {
 					.css('display', 'inline');
 			}
 
+			/** Update hash to trigger Roundcube's form validation */
+			rcmail.cmp_hash += ' ';
+
 			disabled = !disabled;
 		};
 

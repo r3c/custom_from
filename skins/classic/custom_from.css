@@ -17,3 +17,7 @@
     min-width: 300px;
     width: auto;
 }
+
+.listing.iconized tr.custom_from > td.section:before {
+    content: "\f3e5";
+}
