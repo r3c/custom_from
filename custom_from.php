@@ -43,7 +43,6 @@ class custom_from extends rcube_plugin
         $this->add_hook('preferences_list', array($this, 'preferences_list'));
         $this->add_hook('preferences_save', array($this, 'preferences_save'));
         $this->add_hook('template_object_composeheaders', array($this, 'template_object_composeheaders'));
-        $this->add_hook('template_object_composebody', array($this, 'template_object_composebody'));
     }
 
     /**
@@ -102,34 +101,21 @@ class custom_from extends rcube_plugin
                 break;
         }
 
-        return $attrib;
-    }
-
-    /**
-     * Remove signature from email body when replying to a receiving email.
-     */
-    public function template_object_composebody($attrib)
-    {
         if (!self::$is_reply) {
             return $attrib;
         }
-
-        $reply_from = rcmail::get_instance()->user->prefs[self::REPLY_FROM_SETTING] ?? self::RECEIVING_EMAIL_WITH_IDENTITY_OPTION;
-        $rcmail = rcmail::get_instance();
 
         switch ($reply_from) {
             case self::RECEIVING_EMAIL_OPTION:
                 $rcmail->output->set_env('signatures', array());
 
                 break;
-
             case self::RECEIVING_EMAIL_WITH_IDENTITY_OPTION:
                 if (!self::$is_identity) {
                     $rcmail->output->set_env('signatures', array());
                 }
 
                 break;
-
             case self::RECEIVING_EMAIL_WITH_DEFAULT_IDENTITY_OPTION:
                 $default_identity = $rcmail->user->get_identity();
                 $default_identity_id = $default_identity['identity_id'];
@@ -151,7 +137,6 @@ class custom_from extends rcube_plugin
 
         return $attrib;
     }
-
 
     /**
      ** Enable custom "From:" field for drafts.
