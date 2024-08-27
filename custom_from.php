@@ -95,7 +95,9 @@ class custom_from extends rcube_plugin
                     break;
                 }
 
-                $attrib = $this->override_bcc_or_reply_to_fields($reply_from, $attrib);
+                if ($field_content = $this->override_bcc_or_reply_to_fields($reply_from, $attrib)) {
+                    $attrib['content'] = $field_content;
+                }
 
                 break;
         }
@@ -303,12 +305,13 @@ class custom_from extends rcube_plugin
      * $attrib needs all because we reading all attributes for HTML field.
      * @param string $reply_from
      * @param array $attrib
-     * @return array
+     * @return string
      */
     public function override_bcc_or_reply_to_fields($reply_from, $attrib)
     {
         $part = strtolower($attrib['part']);
         $value = '';
+        $field_content = '';
 
         switch ($reply_from) {
             case self::RECEIVING_EMAIL_WITH_DEFAULT_IDENTITY_OPTION:
@@ -331,12 +334,12 @@ class custom_from extends rcube_plugin
                 // Create a textarea field for overriding Roundcube input fields
                 $field = new html_textarea();
 
-                $attrib['content'] = $field->show($value, $field_attrib);
+                $field_content = $field->show($value, $field_attrib);
 
                 break;
         }
 
-        return $attrib;
+        return $field_content;
     }
 
 
