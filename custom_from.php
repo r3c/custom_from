@@ -37,9 +37,15 @@ class custom_from extends rcube_plugin
         $rcmail = rcmail::get_instance();
         $rules = self::get_rules($rcmail->config);
 
+        $fetch_headers = isset($params['fetch_headers']) ? $params['fetch_headers'] : '';
+        $separator = $fetch_headers !== '' ? ' ' : '';
+
         foreach (array_keys($rules) as $header) {
-            $params['fetch_headers'] = (isset($params['fetch_headers']) && $params['fetch_headers'] !== '' ? $params['fetch_headers'] . ' ' : '') . $header;
+            $fetch_headers .= $separator . $header;
+            $separator = ' ';
         }
+
+        $params['fetch_headers'] = $fetch_headers;
 
         return $params;
     }
