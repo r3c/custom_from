@@ -52,90 +52,100 @@ class custom_from extends rcube_plugin
     {
         $this->load_config();
 
-        $address = null;
-        $compose_id = $params['id'];
+        // Early return if plugin "auto enable on compose" mode is disabled
         $rcmail = rcmail::get_instance();
 
-        if (isset($params['param']['reply_uid'])) {
-            $message_uid = $params['param']['reply_uid'];
-        } elseif (isset($params['param']['forward_uid'])) {
-            $message_uid = $params['param']['forward_uid'];
-        } elseif (isset($params['param']['uid'])) {
-            $message_uid = $params['param']['uid'];
-        } else {
-            $message_uid = null;
+        if (!$rcmail->config->get('custom_from_compose_auto', true)) {
+            return;
         }
 
-        if ($rcmail->config->get('custom_from_compose_auto', true) && $message_uid !== null) {
-            $storage = $rcmail->get_storage();
-            $message = $storage->get_message($message_uid);
+        // Search for message ID in known parameters
+        $message_uid_keys = array('draft_uid', 'forward_ui', 'reply_uid', 'uid');
+        $message_uid = null;
 
-            if ($message !== null) {
-                // Browse headers where addresses will be fetched from
-                $recipients = array();
-                $rules = self::get_rules($rcmail->config);
+        foreach ($message_uid_keys as $key) {
+            if (isset($params['param'][$key])) {
+                $message_uid = $params['param'][$key];
 
-                foreach ($rules as $header => $rule) {
-                    $addresses = isset($message->{$header}) ? rcube_mime::decode_address_list($message->{$header}, null, false) : array();
+                break;
+            }
+        }
 
-                    // Decode recipients and matching rules from retrieved addresses
-                    foreach ($addresses as $address) {
-                        if (isset($address['mailto'])) {
-                            $email = $address['mailto'];
+        // Early return if current message is unknown
+        $storage = $rcmail->get_storage();
+        $message = $message_uid !== null ? $storage->get_message($message_uid) : null;
 
-                            $recipients[] = array(
-                                'domain' => preg_replace('/^[^@]*@(.*)$/', '$1', $email),
-                                'email' => $email,
-                                'match_domain' => strpos($rule, 'd') !== false,
-                                'match_exact' => strpos($rule, 'e') !== false,
-                                'match_other' => strpos($rule, 'o') !== false,
-                                'name' => $address['name']
-                            );
-                        }
-                    }
-                }
+        if ($message_uid === null) {
+            return;
+        }
 
-                // Get user identities list
-                $identities = array();
+        // Browse headers where addresses will be fetched from
+        $address = null;
+        $recipients = array();
+        $rules = self::get_rules($rcmail->config);
 
-                foreach ($rcmail->user->list_identities() as $identity) {
-                    $identities[$identity['email']] = array(
-                        'domain' => preg_replace('/^[^@]*@(.*)$/', '$1', $identity['email']),
-                        'name' => $identity['name']
+        foreach ($rules as $header => $rule) {
+            $addresses = isset($message->{$header}) ? rcube_mime::decode_address_list($message->{$header}, null, false) : array();
+
+            // Decode recipients and matching rules from retrieved addresses
+            foreach ($addresses as $address) {
+                if (isset($address['mailto'])) {
+                    $email = $address['mailto'];
+
+                    $recipients[] = array(
+                        'domain' => preg_replace('/^[^@]*@(.*)$/', '$1', $email),
+                        'email' => $email,
+                        'match_domain' => strpos($rule, 'd') !== false,
+                        'match_exact' => strpos($rule, 'e') !== false,
+                        'match_other' => strpos($rule, 'o') !== false,
+                        'name' => $address['name']
                     );
-                }
-
-                // Find best possible match from recipients and identities
-                $address = null;
-                $score = 0;
-
-                foreach ($recipients as $recipient) {
-                    $email = $recipient['email'];
-
-                    // Relevance score 3: exact match found in identities
-                    if ($score < 3 && $recipient['match_exact'] && isset($identities[$email])) {
-                        $address = null;
-                        $score = 3;
-                    }
-
-                    // Relevance score 2: domain match found in identities
-                    if ($score < 2 && $recipient['match_domain']) {
-                        foreach ($identities as $identity) {
-                            if (strcasecmp($identity['domain'], $recipient['domain']) == 0) {
-                                $address = format_email_recipient($email, $identity['name']);
-                                $score = 2;
-                            }
-                        }
-                    }
-
-                    // Relevance score 1: no match found
-                    if ($score < 1 && $recipient['match_other']) {
-                        $address = format_email_recipient($email, $recipient['name']);
-                        $score = 1;
-                    }
                 }
             }
         }
+
+        // Get user identities list
+        $identities = array();
+
+        foreach ($rcmail->user->list_identities() as $identity) {
+            $identities[$identity['email']] = array(
+                'domain' => preg_replace('/^[^@]*@(.*)$/', '$1', $identity['email']),
+                'name' => $identity['name']
+            );
+        }
+
+        // Find best possible match from recipients and identities
+        $address = null;
+        $score = 0;
+
+        foreach ($recipients as $recipient) {
+            $email = $recipient['email'];
+
+            // Relevance score 3: exact match found in identities
+            if ($score < 3 && $recipient['match_exact'] && isset($identities[$email])) {
+                $address = null;
+                $score = 3;
+            }
+
+            // Relevance score 2: domain match found in identities
+            if ($score < 2 && $recipient['match_domain']) {
+                foreach ($identities as $identity) {
+                    if (strcasecmp($identity['domain'], $recipient['domain']) == 0) {
+                        $address = format_email_recipient($email, $identity['name']);
+                        $score = 2;
+                    }
+                }
+            }
+
+            // Relevance score 1: no match found
+            if ($score < 1 && $recipient['match_other']) {
+                $address = format_email_recipient($email, $recipient['name']);
+                $score = 1;
+            }
+        }
+
+        // Store match
+        $compose_id = $params['id'];
 
         self::set_state($compose_id, $address);
     }
