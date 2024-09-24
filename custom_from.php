@@ -13,7 +13,9 @@
 
 class custom_from extends rcube_plugin
 {
-    const DEFAULT_HEADER_RULES = 'X-Original-To=deo;To=de;Cc=de;Cci=de;From=de';
+    const COMPOSE_SUBJECT = 'custom_from_compose_subject';
+    const COMPOSE_SUBJECT_DEFAULT = 'never';
+    const PREFERENCE_SECTION = 'custom_from';
 
     /**
      ** Initialize plugin.
@@ -23,6 +25,9 @@ class custom_from extends rcube_plugin
         $this->add_texts('localization', true);
         $this->add_hook('message_compose', array($this, 'message_compose'));
         $this->add_hook('message_compose_body', array($this, 'message_compose_body'));
+        $this->add_hook('preferences_list', array($this, 'preferences_list'));
+        $this->add_hook('preferences_save', array($this, 'preferences_save'));
+        $this->add_hook('preferences_sections_list', array($this, 'preferences_sections_list'));
         $this->add_hook('render_page', array($this, 'render_page'));
         $this->add_hook('storage_init', array($this, 'storage_init'));
     }
@@ -35,7 +40,8 @@ class custom_from extends rcube_plugin
         $this->load_config();
 
         $rcmail = rcmail::get_instance();
-        $rules = self::get_rules($rcmail->config);
+
+        list($rules) = self::get_configuration($rcmail);
 
         $fetch_headers = isset($params['fetch_headers']) ? $params['fetch_headers'] : '';
         $separator = $fetch_headers !== '' ? ' ' : '';
@@ -86,9 +92,9 @@ class custom_from extends rcube_plugin
         }
 
         // Browse headers where addresses will be fetched from
-        $address = null;
+        list($rules) = self::get_configuration($rcmail);
+
         $recipients = array();
-        $rules = self::get_rules($rcmail->config);
 
         foreach ($rules as $header => $rule) {
             $addresses = isset($message->{$header}) ? rcube_mime::decode_address_list($message->{$header}, null, false) : array();
@@ -101,59 +107,76 @@ class custom_from extends rcube_plugin
                     $recipients[] = array(
                         'domain' => preg_replace('/^[^@]*@(.*)$/', '$1', $email),
                         'email' => $email,
+                        'match_always' => strpos($rule, 'o') !== false,
                         'match_domain' => strpos($rule, 'd') !== false,
                         'match_exact' => strpos($rule, 'e') !== false,
-                        'match_other' => strpos($rule, 'o') !== false,
                         'name' => $address['name']
                     );
                 }
             }
         }
 
-        // Get user identities list
-        $identities = array();
+        // Build lookup maps from domain name and full address
+        $identity_by_domain = array();
+        $identity_by_email = array();
 
         foreach ($rcmail->user->list_identities() as $identity) {
-            $identities[$identity['email']] = array(
-                'domain' => preg_replace('/^[^@]*@(.*)$/', '$1', $identity['email']),
-                'name' => $identity['name']
-            );
+            $domain = strtolower(preg_replace('/^[^@]*@(.*)$/', '$1', $identity['email']));
+            $email = strtolower($identity['email']);
+            $rank = $identity['standard'] === '1' ? 1 : 0;
+
+            if (!isset($identity_by_domain[$domain]) || $identity_by_domain[$domain]['rank'] < $rank) {
+                $identity_by_domain[$domain] = array('name' => $identity['name'], 'rank' => $rank);
+            }
+
+            if (!isset($identity_by_email[$email]) || $identity_by_email[$email]['rank'] < $rank) {
+                $identity_by_email[$email] = array('rank' => $rank);
+            }
         }
 
         // Find best possible match from recipients and identities
-        $address = null;
-        $score = 0;
+        $best_email = null;
+        $best_score = 0;
 
         foreach ($recipients as $recipient) {
-            $email = $recipient['email'];
+            $domain = strtolower($recipient['domain']);
+            $email = strtolower($recipient['email']);
 
-            // Relevance score 3: exact match found in identities
-            if ($score < 3 && $recipient['match_exact'] && isset($identities[$email])) {
-                $address = null;
-                $score = 3;
+            // Relevance score 3: match by e-mail found in identities
+            if ($recipient['match_exact'] && isset($identity_by_email[$email])) {
+                $current_email = null;
+                $current_score = 3;
             }
 
-            // Relevance score 2: domain match found in identities
-            if ($score < 2 && $recipient['match_domain']) {
-                foreach ($identities as $identity) {
-                    if (strcasecmp($identity['domain'], $recipient['domain']) == 0) {
-                        $address = format_email_recipient($email, $identity['name']);
-                        $score = 2;
-                    }
-                }
+            // Relevance score 2: match by domain found in identities
+            else if ($recipient['match_domain'] && isset($identity_by_domain[$domain])) {
+                $current_email = format_email_recipient($recipient['email'], $identity_by_domain[$domain]['name']);
+                $current_score = 2;
             }
 
-            // Relevance score 1: no match found
-            if ($score < 1 && $recipient['match_other']) {
-                $address = format_email_recipient($email, $recipient['name']);
-                $score = 1;
+            // Relevance score 1: any match found
+            else if ($recipient['match_always']) {
+                $current_email = format_email_recipient($recipient['email'], $recipient['name']);
+                $current_score = 1;
+            }
+
+            // No match
+            else {
+                $current_email = null;
+                $current_score = 0;
+            }
+
+            // Overwrite best match if score is higher
+            if ($current_score > $best_score) {
+                $best_email = $current_email;
+                $best_score = $current_score;
             }
         }
 
-        // Store match
+        // Store matched address
         $compose_id = $params['id'];
 
-        self::set_state($compose_id, $address);
+        self::set_state($compose_id, $best_email);
     }
 
     /**
@@ -184,9 +207,9 @@ class custom_from extends rcube_plugin
         }
 
         $address = self::get_state($compose_id);
-
         $rcmail = rcmail::get_instance();
-        $rules = self::get_rules($rcmail->config);
+
+        list($rules) = self::get_configuration($rcmail);
 
         foreach (array_keys($rules) as $header) {
             if (isset($message->headers->{$header})) {
@@ -205,9 +228,87 @@ class custom_from extends rcube_plugin
         }
     }
 
+    public function preferences_list($params)
+    {
+        if ($params['section'] !== self::PREFERENCE_SECTION) {
+            return $params;
+        }
+
+        $rcmail = rcmail::get_instance();
+
+        // Early return if configuration was set from file
+        list(, $from_config) = self::get_configuration($rcmail);
+
+        if ($from_config) {
+            $params['blocks'] = array(
+                'disabled' => array(
+                    'name' => self::get_text_quoted($rcmail, 'preference_disabled'),
+                    'options' => array(
+                        array(
+                            'title' => html::label(self::COMPOSE_SUBJECT, self::get_text_quoted($rcmail, 'preference_disabled_hint')),
+                            'content' => ''
+                        )
+                    )
+                )
+            );
+
+            return $params;
+        }
+
+        // Otherwise build user preference fields
+        $compose_subject = new html_select(array('id' => self::COMPOSE_SUBJECT, 'name' => self::COMPOSE_SUBJECT));
+        $compose_subject->add(self::get_text($rcmail, 'preference_compose_subject_never'), 'never');
+        $compose_subject->add(self::get_text($rcmail, 'preference_compose_subject_exact'), 'exact');
+        $compose_subject->add(self::get_text($rcmail, 'preference_compose_subject_domain'), 'domain');
+        $compose_subject->add(self::get_text($rcmail, 'preference_compose_subject_always'), 'always');
+        $compose_subject_value = self::get_preference($rcmail, self::COMPOSE_SUBJECT, self::COMPOSE_SUBJECT_DEFAULT);
+
+        $params['blocks'] = array(
+            'compose' => array(
+                'name' => self::get_text_quoted($rcmail, 'preference_compose'),
+                'options' => array(
+                    array(
+                        'title' => html::label(self::COMPOSE_SUBJECT, self::get_text_quoted($rcmail, 'preference_compose_subject')),
+                        'content' => $compose_subject->show(array($compose_subject_value))
+                    )
+                )
+            )
+        );
+
+        return $params;
+    }
+
+    public function preferences_save($params)
+    {
+        if ($params['section'] === self::PREFERENCE_SECTION) {
+            $keys = array(
+                self::COMPOSE_SUBJECT
+            );
+
+            foreach ($keys as $key) {
+                $params['prefs'][$key] = rcube_utils::get_input_value($key, rcube_utils::INPUT_POST);
+            }
+        }
+
+        return $params;
+    }
+
+    public function preferences_sections_list($params)
+    {
+        $rcmail = rcmail::get_instance();
+        $params['list'][self::PREFERENCE_SECTION] = array(
+            'id' => self::PREFERENCE_SECTION,
+            'section' => self::get_text($rcmail, 'preference')
+        );
+
+        return $params;
+    }
+
     public function render_page($params)
     {
-        if ($params['template'] === 'compose') {
+        $template = $params['template'];
+
+        if ($template === 'compose') {
             $compose_id = rcube_utils::get_input_value('_id', rcube_utils::INPUT_GET);
             $address = self::get_state($compose_id);
 
@@ -217,6 +318,9 @@ class custom_from extends rcube_plugin
             }
 
             $this->include_script('custom_from.js');
+        }
+
+        if ($template === 'compose' || $template === 'settings') {
             $this->include_stylesheet($this->local_skin_path() . '/custom_from.css');
         }
 
@@ -228,25 +332,72 @@ class custom_from extends rcube_plugin
         rcube::raise_error(array('code' => 500, 'type' => 'php', 'file' => __FILE__, 'line' => __LINE__, 'message' => $message), true, false);
     }
 
-    private static function get_rules($config)
+    private static function get_configuration(rcmail $rcmail)
     {
-        $headers = array();
-        $value = $config->get('custom_from_header_rules', self::DEFAULT_HEADER_RULES);
+        $config_rules = $rcmail->config->get('custom_from_header_rules');
 
-        foreach (explode(';', $value) as $pair) {
-            $fields = explode('=', $pair, 2);
+        if ($config_rules !== null) {
+            $rules = array();
 
-            if (count($fields) === 2) {
-                $headers[strtolower(trim($fields[0]))] = strtolower(trim($fields[1]));
+            foreach (explode(';', $config_rules) as $pair) {
+                $fields = explode('=', $pair, 2);
+
+                if (count($fields) === 2) {
+                    $rules[strtolower(trim($fields[0]))] = strtolower(trim($fields[1]));
+                }
             }
+
+            return array($rules, true);
         }
 
-        return $headers;
+        switch (self::get_preference($rcmail, self::COMPOSE_SUBJECT, self::COMPOSE_SUBJECT_DEFAULT)) {
+            case 'always':
+                $value = 'deo';
+
+                break;
+
+            case 'domain':
+                $value = 'de';
+
+                break;
+
+            case 'exact':
+                $value = 'e';
+
+                break;
+
+            default:
+                $value = '';
+
+                break;
+        }
+
+        return array(array(
+            'bcc' => $value,
+            'cc' => $value,
+            'to' => $value,
+            'x-original-to' => $value
+        ), false);
+    }
+
+    private static function get_preference(rcmail $rcmail, string $key, string $default)
+    {
+        return isset($rcmail->user->prefs[$key]) ? $rcmail->user->prefs[$key] : $default;
     }
 
     private static function get_state($compose_id)
     {
         return $compose_id !== null && isset($_SESSION['custom_from_' . $compose_id]) ? $_SESSION['custom_from_' . $compose_id] : null;
+    }
+
+    private static function get_text(rcmail $rcmail, string $key)
+    {
+        return $rcmail->gettext($key, 'custom_from');
+    }
+
+    private static function get_text_quoted(rcmail $rcmail, string $key)
+    {
+        return rcmail::Q(self::get_text($rcmail, $key));
     }
 
     private static function set_state($compose_id, $value)

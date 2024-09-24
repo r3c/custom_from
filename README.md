@@ -1,8 +1,6 @@
-Custom-From README file
-=======================
+# Custom-From README file
 
-Overview
---------
+## Overview
 
 This plugin adds a blue button to the compose screen, next to the identities
 selection dropdown. By clicking it, a textbox will replace the dropdown,
@@ -13,9 +11,7 @@ When replying to an e-mail sent to you through an address not in your
 identities list, plugin will automatically fire and set "From:" header to the
 address the original e-mail was sent to.
 
-
-Install
--------
+## Install
 
 ### Option 1: install with Composer
 
@@ -37,20 +33,15 @@ in configuration (variable `$config['plugins']` variable in file
 `$ROUNDCUBE_INSTALL_DIRECTORY/config/main.inc.php`). Ensure your web user has
 read access to the plugin directory and all files in it.
 
-
-Usage
------
+## Usage
 
 Once plugin is installed, custom sender button will appear at the right
 hand side of the identity selection list.
 
-If you want to disable the "automatic replacement on reply" feature, rename
-`config.inc.php.dist` file into `config.inc.php`, uncomment the line with a
-parameter named `custom_from_compose_auto` and set this value to `false`.
+Open "Reply address (Custom From)" in user preferences to configure how plugin
+should behave when replying to an e-mail.
 
-
-Thanks
-------
+## Thanks
 
 - dwurf (https://github.com/dwurf) for the globals $IMAP and $USER fix
 - Peter Dey (https://github.com/peterdey) for the custom header feature
