@@ -13,3 +13,7 @@
 #compose_from .custom-from-on {
     background-image: url('../../images/custom_from_on.png');
 }
+
+.listing.iconized tr.custom_from>td.section::before {
+    content: "\f21b";
+}
