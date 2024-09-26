@@ -13,9 +13,10 @@
 
 class custom_from extends rcube_plugin
 {
-    const COMPOSE_SUBJECT = 'custom_from_compose_subject';
-    const COMPOSE_SUBJECT_DEFAULT = 'never';
+    const PREFERENCE_COMPOSE_SUBJECT = 'custom_from_compose_subject';
     const PREFERENCE_SECTION = 'custom_from';
+
+    private array $rules;
 
     /**
      ** Initialize plugin.
@@ -30,6 +31,11 @@ class custom_from extends rcube_plugin
         $this->add_hook('preferences_sections_list', array($this, 'preferences_sections_list'));
         $this->add_hook('render_page', array($this, 'render_page'));
         $this->add_hook('storage_init', array($this, 'storage_init'));
+
+        $rcmail = rcmail::get_instance();
+
+        $this->load_config();
+        $this->rules = self::get_configuration($rcmail);
     }
 
     /**
@@ -37,16 +43,10 @@ class custom_from extends rcube_plugin
      */
     public function storage_init($params)
     {
-        $this->load_config();
-
-        $rcmail = rcmail::get_instance();
-
-        list($rules) = self::get_configuration($rcmail);
-
         $fetch_headers = isset($params['fetch_headers']) ? $params['fetch_headers'] : '';
         $separator = $fetch_headers !== '' ? ' ' : '';
 
-        foreach (array_keys($rules) as $header) {
+        foreach (array_keys($this->rules) as $header) {
             $fetch_headers .= $separator . $header;
             $separator = ' ';
         }
@@ -62,15 +62,6 @@ class custom_from extends rcube_plugin
      */
     public function message_compose($params)
     {
-        $this->load_config();
-
-        // Early return if plugin "auto enable on compose" mode is disabled
-        $rcmail = rcmail::get_instance();
-
-        if (!$rcmail->config->get('custom_from_compose_auto', true)) {
-            return;
-        }
-
         // Search for message ID in known parameters
         $message_uid_keys = array('draft_uid', 'forward_ui', 'reply_uid', 'uid');
         $message_uid = null;
@@ -84,6 +75,7 @@ class custom_from extends rcube_plugin
         }
 
         // Early return if current message is unknown
+        $rcmail = rcmail::get_instance();
         $storage = $rcmail->get_storage();
         $message = $message_uid !== null ? $storage->get_message($message_uid) : null;
 
@@ -92,11 +84,9 @@ class custom_from extends rcube_plugin
         }
 
         // Browse headers where addresses will be fetched from
-        list($rules) = self::get_configuration($rcmail);
-
         $recipients = array();
 
-        foreach ($rules as $header => $rule) {
+        foreach ($this->rules as $header => $rule) {
             $addresses = isset($message->{$header}) ? rcube_mime::decode_address_list($message->{$header}, null, false) : array();
 
             // Decode recipients and matching rules from retrieved addresses
@@ -207,11 +197,8 @@ class custom_from extends rcube_plugin
         }
 
         $address = self::get_state($compose_id);
-        $rcmail = rcmail::get_instance();
 
-        list($rules) = self::get_configuration($rcmail);
-
-        foreach (array_keys($rules) as $header) {
+        foreach (array_keys($this->rules) as $header) {
             if (isset($message->headers->{$header})) {
                 $addresses_header = rcube_mime::decode_address_list($message->headers->{$header}, null, false);
 
@@ -236,39 +223,19 @@ class custom_from extends rcube_plugin
 
         $rcmail = rcmail::get_instance();
 
-        // Early return if configuration was set from file
-        list(, $from_config) = self::get_configuration($rcmail);
-
-        if ($from_config) {
-            $params['blocks'] = array(
-                'disabled' => array(
-                    'name' => self::get_text_quoted($rcmail, 'preference_disabled'),
-                    'options' => array(
-                        array(
-                            'title' => html::label(self::COMPOSE_SUBJECT, self::get_text_quoted($rcmail, 'preference_disabled_hint')),
-                            'content' => ''
-                        )
-                    )
-                )
-            );
-
-            return $params;
-        }
-
-        // Otherwise build user preference fields
-        $compose_subject = new html_select(array('id' => self::COMPOSE_SUBJECT, 'name' => self::COMPOSE_SUBJECT));
+        $compose_subject = new html_select(array('id' => self::PREFERENCE_COMPOSE_SUBJECT, 'name' => self::PREFERENCE_COMPOSE_SUBJECT));
         $compose_subject->add(self::get_text($rcmail, 'preference_compose_subject_never'), 'never');
         $compose_subject->add(self::get_text($rcmail, 'preference_compose_subject_exact'), 'exact');
         $compose_subject->add(self::get_text($rcmail, 'preference_compose_subject_domain'), 'domain');
         $compose_subject->add(self::get_text($rcmail, 'preference_compose_subject_always'), 'always');
-        $compose_subject_value = self::get_preference($rcmail, self::COMPOSE_SUBJECT, self::COMPOSE_SUBJECT_DEFAULT);
+        $compose_subject_value = self::get_preference($rcmail, self::PREFERENCE_COMPOSE_SUBJECT, 'never');
 
         $params['blocks'] = array(
             'compose' => array(
                 'name' => self::get_text_quoted($rcmail, 'preference_compose'),
                 'options' => array(
                     array(
-                        'title' => html::label(self::COMPOSE_SUBJECT, self::get_text_quoted($rcmail, 'preference_compose_subject')),
+                        'title' => html::label(self::PREFERENCE_COMPOSE_SUBJECT, self::get_text_quoted($rcmail, 'preference_compose_subject')),
                         'content' => $compose_subject->show(array($compose_subject_value))
                     )
                 )
@@ -282,7 +249,7 @@ class custom_from extends rcube_plugin
     {
         if ($params['section'] === self::PREFERENCE_SECTION) {
             $keys = array(
-                self::COMPOSE_SUBJECT
+                self::PREFERENCE_COMPOSE_SUBJECT
             );
 
             foreach ($keys as $key) {
@@ -296,10 +263,13 @@ class custom_from extends rcube_plugin
     public function preferences_sections_list($params)
     {
         $rcmail = rcmail::get_instance();
-        $params['list'][self::PREFERENCE_SECTION] = array(
-            'id' => self::PREFERENCE_SECTION,
-            'section' => self::get_text($rcmail, 'preference')
-        );
+
+        if ($rcmail->config->get('custom_from_compose_auto', true)) {
+            $params['list'][self::PREFERENCE_SECTION] = array(
+                'id' => self::PREFERENCE_SECTION,
+                'section' => self::get_text($rcmail, 'preference')
+            );
+        }
 
         return $params;
     }
@@ -334,50 +304,58 @@ class custom_from extends rcube_plugin
 
     private static function get_configuration(rcmail $rcmail)
     {
-        $config_rules = $rcmail->config->get('custom_from_header_rules');
+        if (!$rcmail->config->get('custom_from_compose_auto', true)) {
+            return array();
+        }
 
-        if ($config_rules !== null) {
-            $rules = array();
+        $rules_config = $rcmail->config->get('custom_from_header_rules');
+        $rules = array();
 
-            foreach (explode(';', $config_rules) as $pair) {
+        if ($rules_config !== null) {
+            foreach (explode(';', $rules_config) as $pair) {
                 $fields = explode('=', $pair, 2);
 
                 if (count($fields) === 2) {
                     $rules[strtolower(trim($fields[0]))] = strtolower(trim($fields[1]));
                 }
             }
-
-            return array($rules, true);
         }
 
-        switch (self::get_preference($rcmail, self::COMPOSE_SUBJECT, self::COMPOSE_SUBJECT_DEFAULT)) {
+        switch (self::get_preference($rcmail, self::PREFERENCE_COMPOSE_SUBJECT, '')) {
             case 'always':
-                $value = 'deo';
+                $subject = 'deo';
 
                 break;
 
             case 'domain':
-                $value = 'de';
+                $subject = 'de';
 
                 break;
 
             case 'exact':
-                $value = 'e';
+                $subject = 'e';
+
+                break;
+
+            case 'never':
+                $subject = '';
 
                 break;
 
             default:
-                $value = '';
+                $subject = null;
 
                 break;
         }
 
-        return array(array(
-            'bcc' => $value,
-            'cc' => $value,
-            'to' => $value,
-            'x-original-to' => $value
-        ), false);
+        if ($subject !== null) {
+            $rules['bcc'] = $subject;
+            $rules['cc'] = $subject;
+            $rules['to'] = $subject;
+            $rules['x-original-to'] = $subject;
+        }
+
+        return $rules;
     }
 
     private static function get_preference(rcmail $rcmail, string $key, string $default)
