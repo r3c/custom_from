@@ -8,7 +8,7 @@
 ** @version 1.6.7
 ** @license MIT
 ** @author Remi Caput
-** @url https://github.com/r3c/Custom-From
+** @url https://github.com/r3c/custom_from
 */
 
 class custom_from extends rcube_plugin
