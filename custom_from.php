@@ -308,6 +308,7 @@ class custom_from extends rcube_plugin
             return array();
         }
 
+        // Initialize rules with global settings
         $rules_config = $rcmail->config->get('custom_from_header_rules');
         $rules = array();
 
@@ -321,38 +322,19 @@ class custom_from extends rcube_plugin
             }
         }
 
-        switch (self::get_preference($rcmail, self::PREFERENCE_COMPOSE_SUBJECT, '')) {
-            case 'always':
-                $subject = 'deo';
+        // Overwrite rules with user preference if valid
+        $subject = self::get_preference($rcmail, self::PREFERENCE_COMPOSE_SUBJECT, '');
+        $subject_rules = array('always' => 'deo', 'domain' => 'de', 'exact' => 'e', 'never' => '');
 
-                break;
+        if (isset($subject_rules[$subject])) {
+            $rule = $subject_rules[$subject];
 
-            case 'domain':
-                $subject = 'de';
-
-                break;
-
-            case 'exact':
-                $subject = 'e';
-
-                break;
-
-            case 'never':
-                $subject = '';
-
-                break;
-
-            default:
-                $subject = null;
-
-                break;
-        }
-
-        if ($subject !== null) {
-            $rules['bcc'] = $subject;
-            $rules['cc'] = $subject;
-            $rules['to'] = $subject;
-            $rules['x-original-to'] = $subject;
+            foreach (array('bcc', 'cc', 'to', 'x-original-to') as $header) {
+                if ($rule !== '')
+                    $rules[$header] = $rule;
+                else
+                    unset($rules[$header]);
+            }
         }
 
         return $rules;
