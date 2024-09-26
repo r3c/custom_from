@@ -1,0 +1,32 @@
+<?php
+
+$config = array();
+
+/*
+** Plugin will try to guess when a custom e-mail address should be used when
+** composing an e-mail if this option is set to "true". If you have too many
+** false positives or don't want to use it, set it to false. You can also
+** fine-tune this behavior by changing value of the "custom_from_header_rules"
+** option.
+*/
+//$config['custom_from_compose_auto'] = true;
+
+/*
+** List of allowed matching rules by header type. This define how addresses
+** from various e-mail headers can be used to guess custom address (only if
+** option 'custom_from_compose_auto' is enabled).
+** Format is 'header1=rule1;header2=rule2;...' where headerX is any e-mail
+** header (you can use custom headers here) and ruleX a list of letters, each
+** one identifying a matching rule you want to enable. Available rules are:
+**
+** - e (exact):  an address found in headers can be used if it exactly matches
+**               one of your identities
+** - d (domain): an address found in headers can be used if its domain matches
+**               one of your identities
+** - o (other):  any address found in header can be used
+**
+** By default only exact and domain matching rules are enabled on most headers
+** known to contain e-mail addresses, except for the "X-Original-To" header
+** where all rules are enabled.
+*/
+//$config['custom_from_header_rules'] = 'X-Original-To=de;To=de;Cc=de;Cci=de;From=de';
