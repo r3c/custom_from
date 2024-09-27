@@ -30,3 +30,10 @@ $config = array();
 ** where all rules are enabled.
 */
 //$config['custom_from_header_rules'] = 'X-Original-To=de;To=de;Cc=de;Cci=de;From=de';
+
+
+/*
+** Prevent users from configuring plugin via their preference and only use
+** global configuration.
+*/
+//$config['custom_from_preference_disable'] = false;
