@@ -3,6 +3,7 @@
 $labels = array();
 $labels['preference'] = 'Reply address (Custom From)';
 $labels['preference_compose'] = 'Custom address when replying to an e-mail';
+$labels['preference_compose_contains'] = '...and contains text (optional)';
 $labels['preference_compose_subject'] = 'Enable when one recipient';
 $labels['preference_compose_subject_always'] = 'Always enable automatically';
 $labels['preference_compose_subject_domain'] = 'Uses same domain than an identity';

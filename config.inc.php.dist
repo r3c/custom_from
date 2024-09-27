@@ -12,6 +12,11 @@ $config = array();
 //$config['custom_from_compose_auto'] = true;
 
 /*
+** Only match addresses containing given string against user identities.
+*/
+//$config['custom_from_compose_contains'] = '';
+
+/*
 ** List of allowed matching rules by header type. This define how addresses
 ** from various e-mail headers can be used to guess custom address (only if
 ** option 'custom_from_compose_auto' is enabled).
@@ -30,7 +35,6 @@ $config = array();
 ** where all rules are enabled.
 */
 //$config['custom_from_header_rules'] = 'X-Original-To=de;To=de;Cc=de;Cci=de;From=de';
-
 
 /*
 ** Prevent users from configuring plugin via their preference and only use
