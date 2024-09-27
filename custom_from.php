@@ -14,6 +14,7 @@
 class custom_from extends rcube_plugin
 {
     const PREFERENCE_COMPOSE_CONTAINS = 'custom_from_compose_contains';
+    const PREFERENCE_COMPOSE_IDENTITY = 'custom_from_compose_identity';
     const PREFERENCE_COMPOSE_SUBJECT = 'custom_from_compose_subject';
     const PREFERENCE_SECTION = 'custom_from';
 
@@ -38,7 +39,7 @@ class custom_from extends rcube_plugin
 
         $rcmail = rcmail::get_instance();
 
-        list($contains, $rules) = self::get_configuration($rcmail);
+        list($contains, $identity, $rules) = self::get_configuration($rcmail);
 
         $this->contains = $contains;
         $this->rules = $rules;
@@ -276,10 +277,15 @@ class custom_from extends rcube_plugin
         // Read configuration in case it was just changed
         $rcmail = rcmail::get_instance();
 
-        list($contains, $rules) = self::get_configuration($rcmail);
+        list($contains, $identity, $rules) = self::get_configuration($rcmail);
 
         // Contains preference
         $compose_contains = new html_inputfield(array('id' => self::PREFERENCE_COMPOSE_CONTAINS, 'name' => self::PREFERENCE_COMPOSE_CONTAINS));
+
+        // Identity preference
+        $compose_identity = new html_select(array('id' => self::PREFERENCE_COMPOSE_IDENTITY, 'name' => self::PREFERENCE_COMPOSE_IDENTITY));
+        $compose_identity->add(self::get_text($rcmail, 'preference_compose_identity_always'), 'always');
+        $compose_identity->add(self::get_text($rcmail, 'preference_compose_identity_never'), 'never');
 
         // Subject preference, using global configuration as fallback value
         $rule = isset($rules['to']) ? $rules['to'] : '';
@@ -313,6 +319,10 @@ class custom_from extends rcube_plugin
                     array(
                         'title' => html::label(self::PREFERENCE_COMPOSE_CONTAINS, self::get_text_quoted($rcmail, 'preference_compose_contains')),
                         'content' => $compose_contains->show($contains)
+                    ),
+                    array(
+                        'title' => html::label(self::PREFERENCE_COMPOSE_IDENTITY, self::get_text_quoted($rcmail, 'preference_compose_identity')),
+                        'content' => $compose_identity->show(array($identity))
                     )
                 )
             )
@@ -326,6 +336,7 @@ class custom_from extends rcube_plugin
         if ($params['section'] === self::PREFERENCE_SECTION) {
             $keys = array(
                 self::PREFERENCE_COMPOSE_CONTAINS,
+                self::PREFERENCE_COMPOSE_IDENTITY,
                 self::PREFERENCE_COMPOSE_SUBJECT
             );
 
@@ -395,6 +406,13 @@ class custom_from extends rcube_plugin
             $contains = self::get_preference($rcmail, self::PREFERENCE_COMPOSE_CONTAINS, $contains);
         }
 
+        // Read "identity" parameter from global configuration & preferences if allowed
+        $identity = $rcmail->config->get('custom_from_compose_identity', 'always');
+
+        if ($use_preference) {
+            $identity = self::get_preference($rcmail, self::PREFERENCE_COMPOSE_IDENTITY, $identity);
+        }
+
         // Read "rules" parameter from global configuration & preferences if allowed
         $rules_config = $rcmail->config->get('custom_from_header_rules', 'bcc=ep;cc=ep;from=ep;to=ep;x-original-to=ep');
         $rules = array();
@@ -423,7 +441,7 @@ class custom_from extends rcube_plugin
             }
         }
 
-        return array($contains, $rules);
+        return array($contains, $identity, $rules);
     }
 
     private static function get_preference(rcmail $rcmail, string $key, string $default)
