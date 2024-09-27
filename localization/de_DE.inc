@@ -3,6 +3,7 @@
 $labels = array();
 $labels['preference'] = 'Antwortadresse (Custom From)';
 $labels['preference_compose'] = 'Benutzerdefinierte Adresse beim Antworten auf eine E-Mail';
+$labels['preference_compose_contains'] = '...und enthält Text (optional)';
 $labels['preference_compose_subject'] = 'Aktivieren, wenn ein Empfänger';
 $labels['preference_compose_subject_always'] = 'Immer automatisch aktivieren';
 $labels['preference_compose_subject_domain'] = 'Verwendet dieselbe Domäne wie eine Identität';

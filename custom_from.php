@@ -13,9 +13,11 @@
 
 class custom_from extends rcube_plugin
 {
+    const PREFERENCE_COMPOSE_CONTAINS = 'custom_from_compose_contains';
     const PREFERENCE_COMPOSE_SUBJECT = 'custom_from_compose_subject';
     const PREFERENCE_SECTION = 'custom_from';
 
+    private string $contains;
     private array $rules;
 
     /**
@@ -35,7 +37,11 @@ class custom_from extends rcube_plugin
         $rcmail = rcmail::get_instance();
 
         $this->load_config();
-        $this->rules = self::get_configuration($rcmail);
+
+        list($contains, $rules) = self::get_configuration($rcmail);
+
+        $this->contains = $contains;
+        $this->rules = $rules;
     }
 
     /**
@@ -91,18 +97,24 @@ class custom_from extends rcube_plugin
 
             // Decode recipients and matching rules from retrieved addresses
             foreach ($addresses as $address) {
-                if (isset($address['mailto'])) {
-                    $email = $address['mailto'];
-
-                    $recipients[] = array(
-                        'domain' => preg_replace('/^[^@]*@(.*)$/', '$1', $email),
-                        'email' => $email,
-                        'match_always' => strpos($rule, 'o') !== false,
-                        'match_domain' => strpos($rule, 'd') !== false,
-                        'match_exact' => strpos($rule, 'e') !== false,
-                        'name' => $address['name']
-                    );
+                if (!isset($address['mailto'])) {
+                    continue;
                 }
+
+                $email = $address['mailto'];
+
+                if (strpos($email, $this->contains) === false) {
+                    continue;
+                }
+
+                $recipients[] = array(
+                    'domain' => preg_replace('/^[^@]*@(.*)$/', '$1', $email),
+                    'email' => $email,
+                    'match_always' => strpos($rule, 'o') !== false,
+                    'match_domain' => strpos($rule, 'd') !== false,
+                    'match_exact' => strpos($rule, 'e') !== false,
+                    'name' => $address['name']
+                );
             }
         }
 
@@ -223,24 +235,29 @@ class custom_from extends rcube_plugin
 
         $rcmail = rcmail::get_instance();
 
+        // Contains preference
+        $compose_contains = new html_inputfield(array('id' => self::PREFERENCE_COMPOSE_CONTAINS, 'name' => self::PREFERENCE_COMPOSE_CONTAINS));
+        $compose_contains_default = $rcmail->config->get('custom_from_compose_contains', '');
+        $compose_contains_value = self::get_preference($rcmail, self::PREFERENCE_COMPOSE_CONTAINS, $compose_contains_default);
+
         // Subject preference, using global configuration as fallback value
         $rule = isset($this->rules['to']) ? $this->rules['to'] : '';
 
         if (strpos($rule, 'o') !== false)
-            $compose_subject_value_default = 'always';
+            $compose_subject_default = 'always';
         else if (strpos($rule, 'd') !== false)
-            $compose_subject_value_default = 'domain';
+            $compose_subject_default = 'domain';
         else if (strpos($rule, 'e') !== false)
-            $compose_subject_value_default = 'exact';
+            $compose_subject_default = 'exact';
         else
-            $compose_subject_value_default = 'never';
+            $compose_subject_default = 'never';
 
         $compose_subject = new html_select(array('id' => self::PREFERENCE_COMPOSE_SUBJECT, 'name' => self::PREFERENCE_COMPOSE_SUBJECT));
         $compose_subject->add(self::get_text($rcmail, 'preference_compose_subject_never'), 'never');
         $compose_subject->add(self::get_text($rcmail, 'preference_compose_subject_exact'), 'exact');
         $compose_subject->add(self::get_text($rcmail, 'preference_compose_subject_domain'), 'domain');
         $compose_subject->add(self::get_text($rcmail, 'preference_compose_subject_always'), 'always');
-        $compose_subject_value = self::get_preference($rcmail, self::PREFERENCE_COMPOSE_SUBJECT, $compose_subject_value_default);
+        $compose_subject_value = self::get_preference($rcmail, self::PREFERENCE_COMPOSE_SUBJECT, $compose_subject_default);
 
         $params['blocks'] = array(
             'compose' => array(
@@ -249,6 +266,10 @@ class custom_from extends rcube_plugin
                     array(
                         'title' => html::label(self::PREFERENCE_COMPOSE_SUBJECT, self::get_text_quoted($rcmail, 'preference_compose_subject')),
                         'content' => $compose_subject->show(array($compose_subject_value))
+                    ),
+                    array(
+                        'title' => html::label(self::PREFERENCE_COMPOSE_CONTAINS, self::get_text_quoted($rcmail, 'preference_compose_contains')),
+                        'content' => $compose_contains->show($compose_contains_value)
                     )
                 )
             )
@@ -261,6 +282,7 @@ class custom_from extends rcube_plugin
     {
         if ($params['section'] === self::PREFERENCE_SECTION) {
             $keys = array(
+                self::PREFERENCE_COMPOSE_CONTAINS,
                 self::PREFERENCE_COMPOSE_SUBJECT
             );
 
@@ -318,10 +340,19 @@ class custom_from extends rcube_plugin
     {
         // Early return with no rule if plugin "auto enable" mode is disabled
         if (!$rcmail->config->get('custom_from_compose_auto', true)) {
-            return array();
+            return array('', array());
         }
 
-        // Initialize rules with global settings
+        $use_preference = !$rcmail->config->get('custom_from_preference_disable', false);
+
+        // Read "contains" parameter from global configuration & preferences if allowed
+        $contains = $rcmail->config->get('custom_from_compose_contains', '');
+
+        if ($use_preference) {
+            $contains = self::get_preference($rcmail, self::PREFERENCE_COMPOSE_CONTAINS, $contains);
+        }
+
+        // Read "rules" parameter from global configuration & preferences if allowed
         $rules_config = $rcmail->config->get('custom_from_header_rules');
         $rules = array();
 
@@ -335,8 +366,7 @@ class custom_from extends rcube_plugin
             }
         }
 
-        // Overwrite rules with user preference if valid and allowed
-        if (!$rcmail->config->get('custom_from_preference_disable', false)) {
+        if ($use_preference) {
             $subject = self::get_preference($rcmail, self::PREFERENCE_COMPOSE_SUBJECT, '');
             $subject_rules = array('always' => 'deo', 'domain' => 'de', 'exact' => 'e', 'never' => '');
 
@@ -352,7 +382,7 @@ class custom_from extends rcube_plugin
             }
         }
 
-        return $rules;
+        return array($contains, $rules);
     }
 
     private static function get_preference(rcmail $rcmail, string $key, string $default)
