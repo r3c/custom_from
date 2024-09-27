@@ -223,12 +223,24 @@ class custom_from extends rcube_plugin
 
         $rcmail = rcmail::get_instance();
 
+        // Subject preference, using global configuration as fallback value
+        $rule = isset($this->rules['to']) ? $this->rules['to'] : '';
+
+        if (strpos($rule, 'o') !== false)
+            $compose_subject_value_default = 'always';
+        else if (strpos($rule, 'd') !== false)
+            $compose_subject_value_default = 'domain';
+        else if (strpos($rule, 'e') !== false)
+            $compose_subject_value_default = 'exact';
+        else
+            $compose_subject_value_default = 'never';
+
         $compose_subject = new html_select(array('id' => self::PREFERENCE_COMPOSE_SUBJECT, 'name' => self::PREFERENCE_COMPOSE_SUBJECT));
         $compose_subject->add(self::get_text($rcmail, 'preference_compose_subject_never'), 'never');
         $compose_subject->add(self::get_text($rcmail, 'preference_compose_subject_exact'), 'exact');
         $compose_subject->add(self::get_text($rcmail, 'preference_compose_subject_domain'), 'domain');
         $compose_subject->add(self::get_text($rcmail, 'preference_compose_subject_always'), 'always');
-        $compose_subject_value = self::get_preference($rcmail, self::PREFERENCE_COMPOSE_SUBJECT, 'never');
+        $compose_subject_value = self::get_preference($rcmail, self::PREFERENCE_COMPOSE_SUBJECT, $compose_subject_value_default);
 
         $params['blocks'] = array(
             'compose' => array(
