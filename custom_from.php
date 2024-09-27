@@ -264,7 +264,9 @@ class custom_from extends rcube_plugin
                 self::PREFERENCE_COMPOSE_SUBJECT
             );
 
-            foreach ($keys as $key) { $params['prefs'][$key] = rcube_utils::get_input_value($key, rcube_utils::INPUT_POST); }
+            foreach ($keys as $key) {
+                $params['prefs'][$key] = rcube_utils::get_input_value($key, rcube_utils::INPUT_POST);
+            }
         }
 
         return $params;
@@ -341,7 +343,7 @@ class custom_from extends rcube_plugin
             if (isset($subject_rules[$subject])) {
                 $rule = $subject_rules[$subject];
 
-                foreach (array('bcc', 'cc', 'to', 'x-original-to') as $header) {
+                foreach (array('bcc', 'cc', 'from', 'to', 'x-original-to') as $header) {
                     if ($rule !== '')
                         $rules[$header] = $rule;
                     else
