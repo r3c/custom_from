@@ -26,15 +26,16 @@ $config = array();
 **
 ** - e (exact):  an address found in headers can be used if it exactly matches
 **               one of your identities
+** - p (prefix): an address found in headers can be used if it exactly matches
+**               one of your identities with an optional +suffix
 ** - d (domain): an address found in headers can be used if its domain matches
 **               one of your identities
 ** - o (other):  any address found in header can be used
 **
-** By default only exact and domain matching rules are enabled on most headers
-** known to contain e-mail addresses, except for the "X-Original-To" header
-** where all rules are enabled.
+** By default "prefix" matching rule is enabled on headers known to contain
+** e-mail addresses.
 */
-//$config['custom_from_header_rules'] = 'X-Original-To=de;To=de;Cc=de;Cci=de;From=de';
+//$config['custom_from_header_rules'] = 'X-Original-To=p;To=p;Cc=p;Cci=p;From=p';
 
 /*
 ** Prevent users from configuring plugin via their preference and only use

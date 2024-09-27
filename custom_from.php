@@ -110,10 +110,12 @@ class custom_from extends rcube_plugin
                 $recipients[] = array(
                     'domain' => preg_replace('/^[^@]*@(.*)$/', '$1', $email),
                     'email' => $email,
+                    'email_prefix' => preg_replace('/^([^@+]*)\\+[^@]+@(.*)$/', '$1@$2', $email),
                     'match_always' => strpos($rule, 'o') !== false,
                     'match_domain' => strpos($rule, 'd') !== false,
                     'match_exact' => strpos($rule, 'e') !== false,
-                    'name' => $address['name']
+                    'match_prefix' => strpos($rule, 'p') !== false,
+                    'name' => $address['name'],
                 );
             }
         }
@@ -132,7 +134,7 @@ class custom_from extends rcube_plugin
             }
 
             if (!isset($identity_by_email[$email]) || $identity_by_email[$email]['rank'] < $rank) {
-                $identity_by_email[$email] = array('rank' => $rank);
+                $identity_by_email[$email] = array('name' => $identity['name'], 'rank' => $rank);
             }
         }
 
@@ -143,10 +145,17 @@ class custom_from extends rcube_plugin
         foreach ($recipients as $recipient) {
             $domain = strtolower($recipient['domain']);
             $email = strtolower($recipient['email']);
+            $email_prefix = strtolower($recipient['email_prefix']);
 
-            // Relevance score 3: match by e-mail found in identities
+            // Relevance score 4: match by e-mail found in identities
             if ($recipient['match_exact'] && isset($identity_by_email[$email])) {
                 $current_email = null;
+                $current_score = 4;
+            }
+
+            // Relevance score 3: match by e-mail found in identities after removing "+suffix"
+            if ($recipient['match_prefix'] && isset($identity_by_email[$email_prefix])) {
+                $current_email = format_email_recipient($recipient['email'], $identity_by_email[$email_prefix]['name']);
                 $current_score = 3;
             }
 
@@ -248,6 +257,8 @@ class custom_from extends rcube_plugin
             $compose_subject_value = 'always';
         else if (strpos($rule, 'd') !== false)
             $compose_subject_value = 'domain';
+        else if (strpos($rule, 'p') !== false)
+            $compose_subject_value = 'prefix';
         else if (strpos($rule, 'e') !== false)
             $compose_subject_value = 'exact';
         else
@@ -256,6 +267,7 @@ class custom_from extends rcube_plugin
         $compose_subject = new html_select(array('id' => self::PREFERENCE_COMPOSE_SUBJECT, 'name' => self::PREFERENCE_COMPOSE_SUBJECT));
         $compose_subject->add(self::get_text($rcmail, 'preference_compose_subject_never'), 'never');
         $compose_subject->add(self::get_text($rcmail, 'preference_compose_subject_exact'), 'exact');
+        $compose_subject->add(self::get_text($rcmail, 'preference_compose_subject_prefix'), 'prefix');
         $compose_subject->add(self::get_text($rcmail, 'preference_compose_subject_domain'), 'domain');
         $compose_subject->add(self::get_text($rcmail, 'preference_compose_subject_always'), 'always');
 
@@ -353,16 +365,14 @@ class custom_from extends rcube_plugin
         }
 
         // Read "rules" parameter from global configuration & preferences if allowed
-        $rules_config = $rcmail->config->get('custom_from_header_rules');
+        $rules_config = $rcmail->config->get('custom_from_header_rules', 'bcc=p;cc=p;from=p;to=p;x-original-to=p');
         $rules = array();
 
-        if ($rules_config !== null) {
-            foreach (explode(';', $rules_config) as $pair) {
-                $fields = explode('=', $pair, 2);
+        foreach (explode(';', $rules_config) as $pair) {
+            $fields = explode('=', $pair, 2);
 
-                if (count($fields) === 2) {
-                    $rules[strtolower(trim($fields[0]))] = strtolower(trim($fields[1]));
-                }
+            if (count($fields) === 2) {
+                $rules[strtolower(trim($fields[0]))] = strtolower(trim($fields[1]));
             }
         }
 
