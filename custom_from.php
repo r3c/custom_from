@@ -329,9 +329,7 @@ class custom_from extends rcube_plugin
             foreach (explode(';', $rules_config) as $pair) {
                 $fields = explode('=', $pair, 2);
 
-                if (count($fields) === 2) {
-                    $rules[strtolower(trim($fields[0]))] = strtolower(trim($fields[1]));
-                }
+                if (count($fields) === 2) { $rules   [strtolower    (trim($fields[0]))] = strtolower(trim($fields[1])); }
             }
         }
 
