@@ -264,9 +264,7 @@ class custom_from extends rcube_plugin
                 self::PREFERENCE_COMPOSE_SUBJECT
             );
 
-            foreach ($keys as $key) {
-                $params['prefs'][$key] = rcube_utils::get_input_value($key, rcube_utils::INPUT_POST);
-            }
+            foreach ($keys as $key) { $params['prefs'][$key] = rcube_utils::get_input_value($key, rcube_utils::INPUT_POST); }
         }
 
         return $params;
@@ -276,7 +274,7 @@ class custom_from extends rcube_plugin
     {
         $rcmail = rcmail::get_instance();
 
-        if ($rcmail->config->get('custom_from_compose_auto', true)) {
+        if (!$rcmail->config->get('custom_from_preference_disable', false)) {
             $params['list'][self::PREFERENCE_SECTION] = array(
                 'id' => self::PREFERENCE_SECTION,
                 'section' => self::get_text($rcmail, 'preference')
@@ -316,6 +314,7 @@ class custom_from extends rcube_plugin
 
     private static function get_configuration(rcmail $rcmail)
     {
+        // Early return with no rule if plugin "auto enable" mode is disabled
         if (!$rcmail->config->get('custom_from_compose_auto', true)) {
             return array();
         }
@@ -334,18 +333,20 @@ class custom_from extends rcube_plugin
             }
         }
 
-        // Overwrite rules with user preference if valid
-        $subject = self::get_preference($rcmail, self::PREFERENCE_COMPOSE_SUBJECT, '');
-        $subject_rules = array('always' => 'deo', 'domain' => 'de', 'exact' => 'e', 'never' => '');
+        // Overwrite rules with user preference if valid and allowed
+        if (!$rcmail->config->get('custom_from_preference_disable', false)) {
+            $subject = self::get_preference($rcmail, self::PREFERENCE_COMPOSE_SUBJECT, '');
+            $subject_rules = array('always' => 'deo', 'domain' => 'de', 'exact' => 'e', 'never' => '');
 
-        if (isset($subject_rules[$subject])) {
-            $rule = $subject_rules[$subject];
+            if (isset($subject_rules[$subject])) {
+                $rule = $subject_rules[$subject];
 
-            foreach (array('bcc', 'cc', 'to', 'x-original-to') as $header) {
-                if ($rule !== '')
-                    $rules[$header] = $rule;
-                else
-                    unset($rules[$header]);
+                foreach (array('bcc', 'cc', 'to', 'x-original-to') as $header) {
+                    if ($rule !== '')
+                        $rules[$header] = $rule;
+                    else
+                        unset($rules[$header]);
+                }
             }
         }
 
