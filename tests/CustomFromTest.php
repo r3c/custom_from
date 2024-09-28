@@ -62,16 +62,51 @@ final class CustomFromTest extends TestCase
     #[DataProvider('storage_init_should_fetch_headers_provider')]
     public function test_storage_init_should_fetch_headers($config_values, $user_prefs, $expected): void
     {
-        $plugin = self::create_plugin($config_values, $user_prefs);
+        $rcmail = rcmail::mock();
+        $rcmail->mock_config($config_values);
+        $rcmail->mock_user(array(), $user_prefs);
+
+        $plugin = self::create_plugin();
         $params = $plugin->storage_init(array());
 
         $this->assertSame($params['fetch_headers'], $expected);
     }
 
-    private static function create_plugin($config_values, $user_prefs)
+    public static function message_compose_should_set_state_provider(): array
     {
-        rcmail::mock_instance($config_values, $user_prefs);
+        return array(
+            array(
+                array('to' => 'primary@domain.ext'),
+                null,
+            ),
+            array(
+                array('to' => 'primary+suffix@domain.ext'),
+                'primary+suffix@domain.ext',
+            )
+        );
+    }
 
+    #[DataProvider('message_compose_should_set_state_provider')]
+    public function test_message_compose_should_set_state($message, $expected): void
+    {
+        $identity1 = array('email' => 'primary@domain.ext', 'name' => 'Primary', 'standard' => '1');
+        $identity2 = array('email' => 'secondary@domain.ext', 'name' => 'Secondary', 'standard' => '0');
+
+        $id = 17;
+        $uid = '42';
+        $rcmail = rcmail::mock();
+        $rcmail->mock_config(array());
+        $rcmail->mock_message($uid, $message);
+        $rcmail->mock_user(array($identity1, $identity2), array());
+
+        $plugin = self::create_plugin();
+        $plugin->message_compose(array('id' => $id, 'param' => array('uid' => $uid)));
+
+        $this->assertSame($_SESSION["custom_from_$id"], $expected);
+    }
+
+    private static function create_plugin()
+    {
         $plugin = new custom_from(null);
         $plugin->init();
 

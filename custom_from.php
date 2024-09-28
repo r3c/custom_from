@@ -365,7 +365,7 @@ class custom_from extends rcube_plugin
         }
 
         // Read "rules" parameter from global configuration & preferences if allowed
-        $rules_config = $rcmail->config->get('custom_from_header_rules', 'bcc=p;cc=p;from=p;to=p;x-original-to=p');
+        $rules_config = $rcmail->config->get('custom_from_header_rules', 'bcc=ep;cc=ep;from=ep;to=ep;x-original-to=ep');
         $rules = array();
 
         foreach (explode(';', $rules_config) as $pair) {

@@ -1,25 +1,54 @@
 <?php
 
+function format_email_recipient($email)
+{
+	return $email;
+}
+
 class rcmail
 {
-	private static rcmail | null $instance = null;
+	private static rcmail $instance;
 
 	public static function get_instance()
 	{
 		return self::$instance;
 	}
 
-	public static function mock_instance(array $config_values, array $user_prefs)
+	public static function mock()
 	{
-		$rcmail = new self();
-		$rcmail->config = new rcube_config($config_values);
-		$rcmail->user = new rcube_user($user_prefs);
+		self::$instance = new self();
 
-		self::$instance = $rcmail;
+		return self::$instance;
 	}
 
-	public $config;
-	public $user;
+	public $config = null;
+	public $messages = array();
+	public $user = null;
+
+	public function get_message($id)
+	{
+		return $this->messages[$id];
+	}
+
+	public function get_storage()
+	{
+		return $this;
+	}
+
+	public function mock_config($config_values)
+	{
+		$this->config = new rcube_config($config_values);
+	}
+
+	public function mock_message($id, $message_fields)
+	{
+		$this->messages[$id] = new rcube_message($message_fields);
+	}
+
+	public function mock_user($identities, $prefs)
+	{
+		$this->user = new rcube_user($identities, $prefs);
+	}
 }
 
 class rcube_config
@@ -37,13 +66,21 @@ class rcube_config
 	}
 }
 
-class rcube_user
+class rcube_message
 {
-	public array $prefs;
+	public string $to;
 
-	public function __construct($prefs)
+	public function __construct($fields)
 	{
-		$this->prefs = $prefs;
+		$this->to = $fields['to'];
+	}
+}
+
+class rcube_mime
+{
+	public static function decode_address_list($address)
+	{
+		return array(array('mailto' => $address, 'name' => $address));
 	}
 }
 
@@ -52,4 +89,22 @@ class rcube_plugin
 	public function add_texts() {}
 	public function add_hook() {}
 	public function load_config() {}
+}
+
+class rcube_user
+{
+	public array $prefs;
+
+	private array $identities;
+
+	public function __construct($identities, $prefs)
+	{
+		$this->identities = $identities;
+		$this->prefs = $prefs;
+	}
+
+	public function list_identities()
+	{
+		return $this->identities;
+	}
 }
