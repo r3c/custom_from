@@ -154,7 +154,7 @@ class custom_from extends rcube_plugin
             }
 
             // Relevance score 3: match by e-mail found in identities after removing "+suffix"
-            if ($recipient['match_prefix'] && isset($identity_by_email[$email_prefix])) {
+            else if ($recipient['match_prefix'] && isset($identity_by_email[$email_prefix])) {
                 $current_email = format_email_recipient($recipient['email'], $identity_by_email[$email_prefix]['name']);
                 $current_score = 3;
             }
@@ -378,7 +378,7 @@ class custom_from extends rcube_plugin
 
         if ($use_preference) {
             $subject = self::get_preference($rcmail, self::PREFERENCE_COMPOSE_SUBJECT, '');
-            $subject_rules = array('always' => 'deo', 'domain' => 'de', 'exact' => 'e', 'never' => '');
+            $subject_rules = array('always' => 'deop', 'domain' => 'dep', 'exact' => 'e', 'never' => '', 'prefix' => 'ep');
 
             if (isset($subject_rules[$subject])) {
                 $rule = $subject_rules[$subject];
