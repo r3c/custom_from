@@ -18,3 +18,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: firehed/lint-php-action@v1
+
+  test:
+    name: Test with PHPUnit
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: php-actions/composer@v5
+      - uses: php-actions/phpunit@v4
+        with:
+          args: tests
