@@ -361,7 +361,7 @@ class custom_from extends rcube_plugin
         $use_preference = !$rcmail->config->get('custom_from_preference_disable', false);
 
         // Read "contains" parameter from global configuration & preferences if allowed
-        $contains = $rcmail->config->get('custom_from_compose_contains', '');
+        $contains = $rcmail->config->get(self::PREFERENCE_COMPOSE_CONTAINS, '');
 
         if ($use_preference) {
             $contains = self::get_preference($rcmail, self::PREFERENCE_COMPOSE_CONTAINS, $contains);
