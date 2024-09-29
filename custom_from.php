@@ -83,9 +83,9 @@ class custom_from extends rcube_plugin
         // Early return if current message is unknown
         $rcmail = rcmail::get_instance();
         $storage = $rcmail->get_storage();
-        $message = $message_uid !== null ? $storage->get_message($message_uid) : null;
+        $headers = $message_uid !== null ? $storage->get_message($message_uid) : null;
 
-        if ($message_uid === null) {
+        if ($headers === null) {
             return;
         }
 
@@ -93,7 +93,8 @@ class custom_from extends rcube_plugin
         $recipients = array();
 
         foreach ($this->rules as $header => $rule) {
-            $addresses = isset($message->{$header}) ? rcube_mime::decode_address_list($message->{$header}, null, false) : array();
+            $header_value = $headers->get($header);
+            $addresses = $header_value !== null ? rcube_mime::decode_address_list($header_value, null, false) : array();
 
             // Decode recipients and matching rules from retrieved addresses
             foreach ($addresses as $address) {
@@ -220,8 +221,10 @@ class custom_from extends rcube_plugin
         $address = self::get_state($compose_id);
 
         foreach (array_keys($this->rules) as $header) {
-            if (isset($message->headers->{$header})) {
-                $addresses_header = rcube_mime::decode_address_list($message->headers->{$header}, null, false);
+            $header_value = $message->headers->get($header);
+
+            if ($header_value !== null) {
+                $addresses_header = rcube_mime::decode_address_list($header_value, null, false);
 
                 $addresses_filtered = array_filter($addresses_header, function ($test) use ($address) {
                     return $test['mailto'] !== $address;
@@ -231,7 +234,7 @@ class custom_from extends rcube_plugin
                     return $address['string'];
                 }, $addresses_filtered);
 
-                $message->headers->{$header} = implode(', ', $addresses_string);
+                $message->headers->set($header, implode(', ', $addresses_string));
             }
         }
     }

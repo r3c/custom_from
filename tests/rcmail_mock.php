@@ -68,11 +68,16 @@ class rcube_config
 
 class rcube_message
 {
-	public string $to;
+	public array $fields;
 
 	public function __construct($fields)
 	{
-		$this->to = $fields['to'];
+		$this->fields = $fields;
+	}
+
+	public function get($name)
+	{
+		return isset($this->fields[$name]) ? $this->fields[$name] : null;
 	}
 }
 
