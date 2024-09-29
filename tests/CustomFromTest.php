@@ -69,7 +69,7 @@ final class CustomFromTest extends TestCase
                 array('to' => 'alice@primary.ext'),
                 array(self::RULES => 'to=e'),
                 array(),
-                null, // TODO: assert alice@primary.ext was matched
+                array('email' => null, 'id' => '1')
             ),
             // Subject rule "exact" shouldn't match suffix
             array(
@@ -83,14 +83,14 @@ final class CustomFromTest extends TestCase
                 array('to' => 'alice@primary.ext'),
                 array(),
                 array(),
-                null, // TODO: assert alice@primary.ext was matched
+                array('email' => null, 'id' => '1')
             ),
             // Subject rule "prefix" should match address by prefix
             array(
                 array('to' => 'alice+suffix@primary.ext'),
                 array(),
                 array(),
-                'alice+suffix@primary.ext',
+                array('email' => 'alice+suffix@primary.ext', 'id' => '1')
             ),
             // Subject rule "prefix" should not match different user
             array(
@@ -104,7 +104,7 @@ final class CustomFromTest extends TestCase
                 array('to' => 'unknown@primary.ext', 'x-custom' => 'unknown@secondary.ext'),
                 array(self::RULES => 'x-custom=d'),
                 array(),
-                'unknown@secondary.ext' // TODO: assert bob@primary.ext was matched
+                array('email' => 'unknown@secondary.ext', 'id' => '3')
             ),
             // Subject rule "domain" should not match different domain
             array(
@@ -118,32 +118,32 @@ final class CustomFromTest extends TestCase
                 array('to' => 'unknown@unknown.ext'),
                 array(self::RULES => 'to=o'),
                 array(),
-                'unknown@unknown.ext' // TODO: assert bob@primary.ext was matched
+                array('email' => 'unknown@unknown.ext', 'id' => '2')
             ),
             // Subject rule is overridden by user prefrences
             array(
                 array('to' => 'unknown@secondary.ext'),
                 array(self::RULES => 'to=e'),
                 array(self::SUBJECT => 'domain'),
-                'unknown@secondary.ext'
+                array('email' => 'unknown@secondary.ext', 'id' => '3')
             ),
             // Contains constraint in configuration options matches address
             array(
-                array('to' => 'alice+match@secondary.ext'),
+                array('to' => 'alice+match@primary.ext'),
                 array(self::CONTAINS => 'match'),
                 array(self::SUBJECT => 'domain'),
-                'alice+match@secondary.ext'
+                array('email' => 'alice+match@primary.ext', 'id' => '1')
             ),
             // Contains constraint in configuration options rejects no match
             array(
-                array('to' => 'alice+other@secondary.ext'),
+                array('to' => 'alice+other@primary.ext'),
                 array(self::CONTAINS => 'match'),
                 array(self::SUBJECT => 'domain'),
                 null
             ),
             // Contains constraint in user preferences rejects no match
             array(
-                array('to' => 'alice+other@secondary.ext'),
+                array('to' => 'alice+other@primary.ext'),
                 array(self::CONTAINS => 'other'),
                 array(self::CONTAINS => 'match', self::SUBJECT => 'always'),
                 null
@@ -154,21 +154,21 @@ final class CustomFromTest extends TestCase
     #[DataProvider('message_compose_should_set_state_provider')]
     public function test_message_compose_should_set_state($message, $config_values, $user_prefs, $expected): void
     {
-        $identity1 = array('email' => 'alice@primary.ext', 'name' => 'Alice', 'standard' => '0');
-        $identity2 = array('email' => 'bob@primary.ext', 'name' => 'Bob', 'standard' => '1');
-        $identity3 = array('email' => 'carl@secondary.ext', 'name' => 'Carl', 'standard' => '0');
+        $identity1 = array('identity_id' => '1', 'email' => 'alice@primary.ext', 'name' => 'Alice', 'standard' => '0');
+        $identity2 = array('identity_id' => '2', 'email' => 'bob@primary.ext', 'name' => 'Bob', 'standard' => '1');
+        $identity3 = array('identity_id' => '3', 'email' => 'carl@secondary.ext', 'name' => 'Carl', 'standard' => '0');
 
-        $id = 17;
-        $uid = '42';
+        $compose_id = '17';
+        $message_id = '42';
         $rcmail = rcmail::mock();
         $rcmail->mock_config($config_values);
-        $rcmail->mock_message($uid, $message);
+        $rcmail->mock_message($message_id, $message);
         $rcmail->mock_user(array($identity1, $identity2, $identity3), $user_prefs);
 
         $plugin = self::create_plugin();
-        $plugin->message_compose(array('id' => $id, 'param' => array('uid' => $uid)));
+        $plugin->message_compose(array('id' => $compose_id, 'param' => array('uid' => $message_id)));
 
-        $this->assertSame($_SESSION["custom_from_$id"], $expected);
+        $this->assertSame($_SESSION["custom_from_$compose_id"], $expected);
     }
 
     private static function create_plugin()
