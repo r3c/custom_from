@@ -124,24 +124,30 @@ class custom_from extends rcube_plugin
         // Build lookup maps from domain name and full address
         $identity_by_domain = array();
         $identity_by_email = array();
+        $identity_default = null;
 
         foreach ($rcmail->user->list_identities() as $identity) {
             $domain = strtolower(preg_replace('/^[^@]*@(.*)$/', '$1', $identity['email']));
             $email = strtolower($identity['email']);
-            $rank = $identity['standard'] === '1' ? 1 : 0;
+            $match = array(
+                'id' => $identity['identity_id'],
+                'name' => $identity['name'],
+                'rank' => $identity['standard'] === '1' ? 1 : 0
+            );
 
-            if (!isset($identity_by_domain[$domain]) || $identity_by_domain[$domain]['rank'] < $rank) {
-                $identity_by_domain[$domain] = array('name' => $identity['name'], 'rank' => $rank);
-            }
+            if (!isset($identity_by_domain[$domain]) || $identity_by_domain[$domain]['rank'] < $match['rank'])
+                $identity_by_domain[$domain] = $match;
 
-            if (!isset($identity_by_email[$email]) || $identity_by_email[$email]['rank'] < $rank) {
-                $identity_by_email[$email] = array('name' => $identity['name'], 'rank' => $rank);
-            }
+            if (!isset($identity_by_email[$email]) || $identity_by_email[$email]['rank'] < $match['rank'])
+                $identity_by_email[$email] = $match;
+
+            if ($identity_default === null || $identity_default['rank'] < $match['rank'])
+                $identity_default = $match;
         }
 
         // Find best possible match from recipients and identities
-        $best_email = null;
         $best_score = 0;
+        $best_state = null;
 
         foreach ($recipients as $recipient) {
             $domain = strtolower($recipient['domain']);
@@ -150,45 +156,63 @@ class custom_from extends rcube_plugin
 
             // Relevance score 4: match by e-mail found in identities
             if ($recipient['match_exact'] && isset($identity_by_email[$email])) {
-                $current_email = null;
+                $match = $identity_by_email[$email];
+
                 $current_score = 4;
+                $current_state = array(
+                    'email' => null,
+                    'id' => $match['id']
+                );
             }
 
             // Relevance score 3: match by e-mail found in identities after removing "+suffix"
             else if ($recipient['match_prefix'] && isset($identity_by_email[$email_prefix])) {
-                $current_email = format_email_recipient($recipient['email'], $identity_by_email[$email_prefix]['name']);
+                $match = $identity_by_email[$email_prefix];
+
                 $current_score = 3;
+                $current_state = array(
+                    'email' => format_email_recipient($recipient['email'], $match['name']),
+                    'id' => $match['id']
+                );
             }
 
             // Relevance score 2: match by domain found in identities
             else if ($recipient['match_domain'] && isset($identity_by_domain[$domain])) {
-                $current_email = format_email_recipient($recipient['email'], $identity_by_domain[$domain]['name']);
+                $match = $identity_by_domain[$domain];
+
                 $current_score = 2;
+                $current_state = array(
+                    'email' => format_email_recipient($recipient['email'], $match['name']),
+                    'id' => $match['id']
+                );
             }
 
             // Relevance score 1: any match found
-            else if ($recipient['match_always']) {
-                $current_email = format_email_recipient($recipient['email'], $recipient['name']);
+            else if ($recipient['match_always'] && $identity_default !== null) {
                 $current_score = 1;
+                $current_state = array(
+                    'email' => format_email_recipient($recipient['email'], $recipient['name']),
+                    'id' => $identity_default['id']
+                );
             }
 
             // No match
             else {
-                $current_email = null;
                 $current_score = 0;
+                $current_state = null;
             }
 
             // Overwrite best match if score is higher
             if ($current_score > $best_score) {
-                $best_email = $current_email;
                 $best_score = $current_score;
+                $best_state = $current_state;
             }
         }
 
         // Store matched address
         $compose_id = $params['id'];
 
-        self::set_state($compose_id, $best_email);
+        self::set_state($compose_id, $best_state);
     }
 
     /**
@@ -218,23 +242,27 @@ class custom_from extends rcube_plugin
             return;
         }
 
-        $address = self::get_state($compose_id);
+        $state = self::get_state($compose_id);
 
-        foreach (array_keys($this->rules) as $header) {
-            $header_value = $message->headers->get($header);
+        if (isset($state['email'])) {
+            $email = $state['email'];
 
-            if ($header_value !== null) {
-                $addresses_header = rcube_mime::decode_address_list($header_value, null, false);
+            foreach (array_keys($this->rules) as $header) {
+                $header_value = $message->headers->get($header);
 
-                $addresses_filtered = array_filter($addresses_header, function ($test) use ($address) {
-                    return $test['mailto'] !== $address;
-                });
+                if ($header_value !== null) {
+                    $addresses_header = rcube_mime::decode_address_list($header_value, null, false);
 
-                $addresses_string = array_map(function ($address) {
-                    return $address['string'];
-                }, $addresses_filtered);
+                    $addresses_filtered = array_filter($addresses_header, function ($test) use ($email) {
+                        return $test['mailto'] !== $email;
+                    });
 
-                $message->headers->set($header, implode(', ', $addresses_string));
+                    $addresses_string = array_map(function ($address) {
+                        return $address['string'];
+                    }, $addresses_filtered);
+
+                    $message->headers->set($header, implode(', ', $addresses_string));
+                }
             }
         }
     }
@@ -329,11 +357,11 @@ class custom_from extends rcube_plugin
 
         if ($template === 'compose') {
             $compose_id = rcube_utils::get_input_value('_id', rcube_utils::INPUT_GET);
-            $address = self::get_state($compose_id);
+            $state = self::get_state($compose_id);
 
-            if ($address !== null) {
+            if (isset($state['email'])) {
                 $rcmail = rcmail::get_instance();
-                $rcmail->output->add_footer('<script type="text/javascript">rcmail.addEventListener(\'init\', function (event) { customFromToggle(event, ' . json_encode($address) . '); });</script>');
+                $rcmail->output->add_footer('<script type="text/javascript">rcmail.addEventListener(\'init\', function (event) { customFromToggle(event, ' . json_encode($state['email']) . '); });</script>');
             }
 
             $this->include_script('custom_from.js');
