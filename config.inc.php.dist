@@ -17,6 +17,11 @@ $config = array();
 //$config['custom_from_compose_contains'] = '';
 
 /*
+** Policy for using parameters (name, signature) of matched identity.
+*/
+//$config['custom_from_compose_identity'] = 'loose'; // 'exact', 'loose'
+
+/*
 ** List of allowed matching rules by header type. This define how addresses
 ** from various e-mail headers can be used to guess custom address (only if
 ** option 'custom_from_compose_auto' is enabled).

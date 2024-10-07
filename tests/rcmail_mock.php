@@ -1,8 +1,8 @@
 <?php
 
-function format_email_recipient($email)
+function format_email_recipient($email, $name)
 {
-	return $email;
+	return $name . ' <' . $email . '>';
 }
 
 class rcmail
@@ -83,9 +83,11 @@ class rcube_message
 
 class rcube_mime
 {
-	public static function decode_address_list($address)
+	public static function decode_address_list($input)
 	{
-		return array(array('mailto' => $address, 'name' => $address));
+		return preg_match('/(.*) <(.*)>/', $input, $match) === 1
+			? array(array('mailto' => $match[2], 'name' => $match[1]))
+			: array(array('mailto' => $input, 'name' => $input));
 	}
 }
 
@@ -111,5 +113,22 @@ class rcube_user
 	public function list_identities()
 	{
 		return $this->identities;
+	}
+}
+
+class rcube_utils
+{
+	public const INPUT_GET = 1;
+
+	private static $input_values = array();
+
+	public static function get_input_value($name, $mode)
+	{
+		return $mode === self::INPUT_GET ? self::$input_values[$name] : null;
+	}
+
+	public static function mock_input_value($name, $value)
+	{
+		self::$input_values[$name] = $value;
 	}
 }
