@@ -5,7 +5,7 @@
 **
 ** Description: replace dropdown by textbox to allow "From:" header input
 **
-** @version 1.8.0
+** @version 1.8.1
 ** @license MIT
 ** @author Remi Caput
 ** @url https://github.com/r3c/custom_from
