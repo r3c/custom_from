@@ -107,8 +107,9 @@ class custom_from extends rcube_plugin
 
         // Browse headers where addresses will be fetched from
         $recipients = array();
+        $rules = isset($params['param']['draft_uid']) ? array_intersect_key($this->rules, array('from' => null)) : $this->rules;
 
-        foreach ($this->rules as $header => $rule) {
+        foreach ($rules as $header => $rule) {
             $header_value = $headers->get($header);
             $addresses = $header_value !== null ? rcube_mime::decode_address_list($header_value, null, false) : array();
 

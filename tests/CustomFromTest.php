@@ -99,8 +99,18 @@ final class CustomFromTest extends TestCase
     public static function message_compose_should_set_state_provider(): array
     {
         return array(
+            // Missing message shouldn't match anything
+            array(
+                'unknown',
+                array('to' => 'alice@primary.ext'),
+                array(self::RULES => 'to=o'),
+                array(),
+                null,
+                null
+            ),
             // Subject rule "exact" should match address exactly
             array(
+                'uid',
                 array('to' => 'alice@primary.ext'),
                 array(self::RULES => 'to=e'),
                 array(),
@@ -109,6 +119,7 @@ final class CustomFromTest extends TestCase
             ),
             // Subject rule "exact" shouldn't match suffix
             array(
+                'uid',
                 array('to' => 'alice+suffix@primary.ext'),
                 array(self::RULES => 'to=e'),
                 array(),
@@ -117,6 +128,7 @@ final class CustomFromTest extends TestCase
             ),
             // Subject rule "prefix" should match address exactly
             array(
+                'uid',
                 array('to' => 'alice@primary.ext'),
                 array(),
                 array(),
@@ -125,6 +137,7 @@ final class CustomFromTest extends TestCase
             ),
             // Subject rule "prefix" should match address by prefix
             array(
+                'uid',
                 array('to' => 'alice+suffix@primary.ext'),
                 array(),
                 array(),
@@ -133,6 +146,7 @@ final class CustomFromTest extends TestCase
             ),
             // Subject rule "prefix" should not match different user
             array(
+                'uid',
                 array('to' => 'carl+suffix@primary.ext'),
                 array(),
                 array(),
@@ -141,6 +155,7 @@ final class CustomFromTest extends TestCase
             ),
             // Subject rule "domain" on custom header should match address by domain
             array(
+                'uid',
                 array('to' => 'unknown@primary.ext', 'x-custom' => 'unknown@secondary.ext'),
                 array(self::RULES => 'x-custom=d'),
                 array(),
@@ -149,6 +164,7 @@ final class CustomFromTest extends TestCase
             ),
             // Subject rule "domain" should not match different domain
             array(
+                'uid',
                 array('to' => 'unknown@unknown.ext'),
                 array(self::RULES => 'to=d'),
                 array(),
@@ -157,6 +173,7 @@ final class CustomFromTest extends TestCase
             ),
             // Subject rule "other" should match anything
             array(
+                'uid',
                 array('to' => 'unknown@unknown.ext'),
                 array(self::RULES => 'to=o'),
                 array(),
@@ -165,6 +182,7 @@ final class CustomFromTest extends TestCase
             ),
             // Subject rule is overridden by user prefrences
             array(
+                'uid',
                 array('to' => 'unknown@secondary.ext'),
                 array(self::RULES => 'to=e'),
                 array(self::SUBJECT => 'domain'),
@@ -173,6 +191,7 @@ final class CustomFromTest extends TestCase
             ),
             // Contains constraint in configuration options matches address
             array(
+                'uid',
                 array('to' => 'alice+match@primary.ext'),
                 array(self::CONTAINS => 'match'),
                 array(self::SUBJECT => 'domain'),
@@ -181,6 +200,7 @@ final class CustomFromTest extends TestCase
             ),
             // Contains constraint in configuration options rejects no match
             array(
+                'uid',
                 array('to' => 'alice+other@primary.ext'),
                 array(self::CONTAINS => 'match'),
                 array(self::SUBJECT => 'domain'),
@@ -189,6 +209,7 @@ final class CustomFromTest extends TestCase
             ),
             // Contains constraint in user preferences rejects no match
             array(
+                'uid',
                 array('to' => 'alice+other@primary.ext'),
                 array(self::CONTAINS => 'other'),
                 array(self::CONTAINS => 'match', self::SUBJECT => 'always'),
@@ -197,6 +218,7 @@ final class CustomFromTest extends TestCase
             ),
             // Identity behavior "default" returns matched identity with no sender on exact match
             array(
+                'uid',
                 array('to' => 'carl@secondary.ext'),
                 array(),
                 array(self::SUBJECT => 'always'),
@@ -205,6 +227,7 @@ final class CustomFromTest extends TestCase
             ),
             // Identity behavior "default" returns matched identity and sender with identity name on domain match
             array(
+                'uid',
                 array('to' => 'unknown@secondary.ext'),
                 array(),
                 array(self::SUBJECT => 'domain'),
@@ -213,6 +236,7 @@ final class CustomFromTest extends TestCase
             ),
             // Identity behavior "loose" returns matched identity and sender with identity name on prefix match
             array(
+                'uid',
                 array('to' => 'SomeName <carl+suffix@secondary.ext>'),
                 array(),
                 array(self::IDENTITY => 'loose', self::SUBJECT => 'prefix'),
@@ -221,6 +245,7 @@ final class CustomFromTest extends TestCase
             ),
             // Identity behavior "exact" returns matched identity with no sender on exact match
             array(
+                'uid',
                 array('to' => 'carl@secondary.ext'),
                 array(self::IDENTITY => 'exact'),
                 array(self::SUBJECT => 'always'),
@@ -229,17 +254,27 @@ final class CustomFromTest extends TestCase
             ),
             // Identity behavior "exact" returns no identity and sender with recipient name on prefix match
             array(
+                'uid',
                 array('to' => 'SomeName <carl+suffix@secondary.ext>'),
                 array(),
                 array(self::IDENTITY => 'exact', self::SUBJECT => 'prefix'),
                 null,
                 'SomeName <carl+suffix@secondary.ext>'
+            ),
+            // Header "from" should be selected when composing a draft
+            array(
+                'draft_uid',
+                array('from' => 'other@primary.ext', 'to' => 'alice@primary.ext'),
+                array(self::RULES => 'from=d;to=e'),
+                array(),
+                '2',
+                'Bob <other@primary.ext>'
             )
         );
     }
 
     #[DataProvider('message_compose_should_set_state_provider')]
-    public function test_message_compose_should_set_state($message, $config_values, $user_prefs, $expected_identity, $expected_sender): void
+    public function test_message_compose_should_set_state($uid_key, $message, $config_values, $user_prefs, $expected_identity, $expected_sender): void
     {
         $identity1 = array('identity_id' => '1', 'email' => 'alice@primary.ext', 'name' => 'Alice', 'standard' => '0');
         $identity2 = array('identity_id' => '2', 'email' => 'bob@primary.ext', 'name' => 'Bob', 'standard' => '1');
@@ -253,7 +288,7 @@ final class CustomFromTest extends TestCase
         $rcmail->mock_user(array($identity1, $identity2, $identity3), $user_prefs);
 
         $plugin = self::create_plugin();
-        $plugin->message_compose(array('id' => $compose_id, 'param' => array('uid' => $message_id)));
+        $plugin->message_compose(array('id' => $compose_id, 'param' => array($uid_key => $message_id)));
 
         $state = self::get_state($plugin, $compose_id);
 
