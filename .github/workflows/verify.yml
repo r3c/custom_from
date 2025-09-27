@@ -29,3 +29,14 @@ jobs:
       - uses: php-actions/phpunit@v4
         with:
           args: tests
+
+  validate:
+    name: Validate
+    runs-on: ubuntu-latest
+
+    needs:
+      - lint
+      - test
+
+    steps:
+      - run: true
