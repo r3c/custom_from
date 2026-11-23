@@ -85,7 +85,7 @@ class custom_from extends rcube_plugin
     public function message_compose($params)
     {
         // Search for message ID in known parameters
-        $message_uid_keys = array('draft_uid', 'forward_ui', 'reply_uid', 'uid');
+        $message_uid_keys = array('draft_uid', 'forward_uid', 'reply_uid', 'uid');
         $message_uid = null;
 
         foreach ($message_uid_keys as $key) {

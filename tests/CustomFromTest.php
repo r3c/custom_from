@@ -269,6 +269,24 @@ final class CustomFromTest extends TestCase
                 array(),
                 '2',
                 'Bob <other@primary.ext>'
+            ),
+            // Forward UID should be recognized
+            array(
+                'forward_uid',
+                array('to' => 'alice@primary.ext'),
+                array(self::RULES => 'to=e'),
+                array(),
+                '1',
+                null
+            ),
+            // Reply UID should be recognized
+            array(
+                'reply_uid',
+                array('to' => 'alice@primary.ext'),
+                array(self::RULES => 'to=e'),
+                array(),
+                '1',
+                null
             )
         );
     }
