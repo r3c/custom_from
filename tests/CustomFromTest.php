@@ -295,6 +295,103 @@ final class CustomFromTest extends TestCase
         $this->assertSame($state, array($expected_identity, $expected_sender));
     }
 
+    public static function message_compose_body_should_set_header_provider(): array
+    {
+        return array(
+            // Matching the only rule
+            array(
+                array(self::RULES => 'to=e'),
+                array(
+                    'to' => 'alice@primary.ext',
+                    'cc' => 'alice@primary.ext'
+                ),
+                'alice@primary.ext',
+                array(
+                    'to' => '',
+                    'cc' => 'alice@primary.ext'
+                )
+            ),
+            // Not matching the only rule
+            array(
+                array(self::RULES => 'to=e'),
+                array(
+                    'to' => 'alice@primary.ext',
+                    'cc' => 'alice@primary.ext'
+                ),
+                'bob@primary.ext',
+                array(
+                    'to' => 'alice@primary.ext',
+                    'cc' => 'alice@primary.ext'
+                )
+            ),
+            // Update only the headers that match the rules
+            array(
+                array(self::RULES => 'to=e;cc=e'),
+                array(
+                    'bcc' => 'alice@primary.ext',
+                    'cc' => 'bob@primary.ext',
+                    'to' => 'Alice <alice@primary.ext>'
+                ),
+                'alice@primary.ext',
+                array(
+                    'bcc' => 'alice@primary.ext',
+                    'cc' => 'bob@primary.ext',
+                    'to' => ''
+                )
+            )
+        );
+    }
+
+    #[DataProvider('message_compose_body_should_set_header_provider')]
+    public function test_message_compose_body_should_set_header($config_values, $header_values, $sender, $expected_values): void
+    {
+        $compose_id = '17';
+
+        $rcmail = rcmail::mock();
+        $rcmail->mock_config($config_values);
+        $rcmail->mock_user(array(), array());
+
+        $plugin = self::create_plugin();
+
+        rcube_utils::mock_input_value('_id', $compose_id);
+
+        self::set_state($plugin, $compose_id, '1', $sender);
+
+        $headers = new class($header_values) {
+            private array $values;
+
+            public function __construct(array $values)
+            {
+                $this->values = $values;
+            }
+
+            public function get(string $name, bool $decode = true)
+            {
+                return !$decode && isset($this->values[$name]) ? $this->values[$name] : null;
+            }
+
+            public function set(string $name, string $value): void
+            {
+                $this->values[$name] = $value;
+            }
+        };
+
+        $message = new class($headers) {
+            public $headers;
+
+            public function __construct($headers)
+            {
+                $this->headers = $headers;
+            }
+        };
+
+        $plugin->message_compose_body(array('message' => $message));
+
+        foreach ($expected_values as $header => $expected_value) {
+            $this->assertSame($expected_value, $headers->get($header, false));
+        }
+    }
+
     private static function create_plugin()
     {
         $plugin = new custom_from(null);

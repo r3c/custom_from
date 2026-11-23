@@ -86,8 +86,8 @@ class rcube_mime
 	public static function decode_address_list($input)
 	{
 		return preg_match('/(.*) <(.*)>/', $input, $match) === 1
-			? array(array('mailto' => $match[2], 'name' => $match[1]))
-			: array(array('mailto' => $input, 'name' => $input));
+			? array(array('mailto' => $match[2], 'name' => $match[1], 'string' => $input))
+			: array(array('mailto' => $input, 'name' => $input, 'string' => $input));
 	}
 }
 
