@@ -274,7 +274,7 @@ class custom_from extends rcube_plugin
             // place to introduce a dedicated hook, see follow-up at
             // https://github.com/roundcube/roundcubemail/issues/7590.
             foreach (array_keys($this->rules) as $header) {
-                $header_value = $message->headers->get($header);
+                $header_value = $message->headers->get($header, false);
 
                 if ($header_value !== null) {
                     $addresses_header = rcube_mime::decode_address_list($header_value, null, false);
