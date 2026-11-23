@@ -26,8 +26,11 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: php-actions/composer@v6
+        with:
+          php_extensions: mbstring
       - uses: php-actions/phpunit@v4
         with:
+          php_extensions: mbstring
           args: tests
 
   validate:
